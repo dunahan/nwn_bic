@@ -64,7 +64,15 @@ Hitpoint dice: 4
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - (CLASS) Umgang mit Waffen (Magier)
+ - (RACE) Rasche Meisterschaft
+ - (CLASS) Vertrauten herbeirufen
+ - (CLASS) Schriftrolle anfertigen
+ - Mächtiger Zauberfokus (Nekromantie)
+ - Zauberfokus (Nekromantie)
+
+
 
 ------------------------------
 Level 2 - Magier
@@ -72,7 +80,9 @@ Hitpoint dice: 4
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+None
+
 
 ------------------------------
 Level 3 - Magier
@@ -80,7 +90,10 @@ Hitpoint dice: 4
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - Abhärtung
+
+
 
 ------------------------------
 Level 4 - Bleicher Meister
@@ -89,7 +102,10 @@ Ability: Int
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - (CLASS) Knochenrüstung
+
+
 
 ------------------------------
 Level 5 - Magier
@@ -97,7 +113,9 @@ Hitpoint dice: 2
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+None
+
 
 ------------------------------
 Level 6 - Magier
@@ -105,7 +123,11 @@ Hitpoint dice: 3
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - Zauberstab herstellen
+ - Durchschlagende Zauber
+
+
 
 ------------------------------
 Level 7 - Magier
@@ -113,7 +135,9 @@ Hitpoint dice: 3
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+None
+
 
 ------------------------------
 Level 8 - Bleicher Meister
@@ -122,7 +146,10 @@ Ability: Int
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - (CLASS) Tote beleben
+
+
 
 ------------------------------
 Level 9 - Magier
@@ -130,7 +157,10 @@ Hitpoint dice: 2
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - Mächtige Durchschlagende Zauber
+
+
 
 ------------------------------
 Level 10 - Bleicher Meister
@@ -138,7 +168,10 @@ Hitpoint dice: 3
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - (CLASS) Dunkelsicht
+
+
 
 ------------------------------
 Level 11 - Magier
@@ -146,7 +179,9 @@ Hitpoint dice: 4
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+None
+
 
 ------------------------------
 Level 12 - Bleicher Meister
@@ -155,7 +190,11 @@ Ability: Int
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - (CLASS) Untote herbeizaubern
+ - Zauber verstärken
+
+
 
 ------------------------------
 Level 13 - Magier
@@ -163,7 +202,9 @@ Hitpoint dice: 3
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+None
+
 
 ------------------------------
 Level 14 - Bleicher Meister
@@ -171,7 +212,10 @@ Hitpoint dice: 4
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - (CLASS) Todlose Kraft
+
+
 
 ------------------------------
 Level 15 - Magier
@@ -179,7 +223,11 @@ Hitpoint dice: 3
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - Arkane Verteidigung (Nekromantie)
+ - Trank brauen
+
+
 
 
 Character sheet exported using NWN Tool version 2.0.1 - http://nwntool.coucou.net

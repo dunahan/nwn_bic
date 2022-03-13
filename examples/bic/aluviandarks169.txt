@@ -58,7 +58,20 @@ Hitpoint dice: 4
 Skills:
 None
 
-[%NEW_FEATS_LIST][%NO_NEW_FEATS]
+Feats:
+ - (CLASS) Umgang mit Waffen (Magier)
+ - (RACE) Immunität gegen Schlaf
+ - (RACE) Widerstandskraft gegen Bezauberung
+ - (RACE) Fertigkeitsvertrautheit (Lauschen)
+ - (RACE) Fertigkeitsvertrautheit (Suchen)
+ - (RACE) Fertigkeitsvertrautheit (Entdecken)
+ - (RACE) Scharfe Sinne
+ - (RACE) Umgang mit Waffen (Elf)
+ - (CLASS) Vertrauten herbeirufen
+ - (RACE) Dämmersicht
+ - Im Kampf zaubern
+
+
 
 
 Character sheet exported using NWN Tool version 2.0.1 - http://nwntool.coucou.net
