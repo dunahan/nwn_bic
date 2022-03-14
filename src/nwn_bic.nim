@@ -17,8 +17,7 @@ Usage:
 let args = paramStr(1)
 
 let root = openFileStream(args).readGffRoot(false)
-var input: string # = "Description: "          # declare it, even if it isn't used yet
-var data = root["FirstName", GffCExoLocString] # declare it with this style?
+var input: string
 
 var output = newFileStream("default.txt", fmWrite)
 if not isNil(output):
@@ -26,9 +25,11 @@ if not isNil(output):
   output.writeLine("     IDENTITY")
   output.writeLine(LINE)
   
-  if not isEmptyOrWhitespace(data):
-    data = root["FirstName", GffCExoLocString], " ", root["LastName", GffCExoLocString]
-  output.writeLine("Name: ", data)
+  let label = "Name: "
+  let first = root["FirstName", GffCExoLocString]
+  let last = root["LastName", GffCExoLocString]
+  input = label & $first & " " & $last
+  output.writeLine(input)
   
   output.writeLine("Race: ")
   output.writeLine("Gender: ")

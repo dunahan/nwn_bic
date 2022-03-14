@@ -1,3 +1,36 @@
-----
-Description: [4294967295]{0: "Your only hope for fame and fortune, and to escape the life of a commoner, was to become an adventurer. Guided by your goals and dreams, you have set off in search of excitement."}
-----
+-----------------------
+     IDENTITY
+-----------------------
+Name: [4294967295]{0: "Jacob"} [4294967295]{0: "Chaal"}
+Race: 
+Gender: 
+Age: 
+Description: 
+Subrace: 
+Deity: 
+
+-----------------------
+     FINAL BUILD
+-----------------------
+
+CLASSES:
+
+ABILITIES:
+  Str: 
+  Dex: 
+  Con: 
+  Int: 
+  Wis: 
+  Cha: 
+
+STATISTICS:
+  Hit Points: 
+  AC: 
+  Will Save: 
+  Fort. Save: 
+  Ref. Save: 
+
+SKILLS:
+
+FEATS:
+-----------------------
