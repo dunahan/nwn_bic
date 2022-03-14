@@ -25,3 +25,8 @@ jobs:
         run: nim -v
       - name: Print Nimble version
         run: nimble -v
+       
+      - name: Build with nimble -y 
+        run: nimble build -y
+      - name: Test with nimble -y        
+        run: nimble test -y
