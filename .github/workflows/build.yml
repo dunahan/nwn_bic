@@ -2,7 +2,19 @@
 name: Github Actions Build
 
 # Controls when the workflow will run
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '.gitignore'
+      - '**.md'
+      - 'examples/**'
+  pull_request:
+    paths-ignore:
+      - '.gitignore'    
+      - '**.md'
+      - 'examples/**'      
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -11,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         
     runs-on: ${{ matrix.os }}
 
