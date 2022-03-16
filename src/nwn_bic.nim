@@ -15,50 +15,38 @@ Usage:
 
 # get cmd params
 let args = paramStr(1)
-
 let root = openFileStream(args).readGffRoot(false)
-var input: string
-
 var output = newFileStream("default.txt", fmWrite)
 if not isNil(output):
-  output.writeLine(LINE)
-  output.writeLine("     IDENTITY")
-  output.writeLine(LINE)
-  
-  let label = "Name: "
-  let first = root["FirstName", GffCExoLocString]
-  let last = root["LastName", GffCExoLocString]
-  input = label & $first & " " & $last
-  output.writeLine(input)
-  
-  output.writeLine("Race: ")
-  output.writeLine("Gender: ")
-  output.writeLine("Age: ")
-  output.writeLine("Description: ")
-  output.writeLine("Subrace: ")
-  output.writeLine("Deity: ")
-  
-  output.writeLine("\n", LINE)
-  output.writeLine("     FINAL BUILD")
-  output.writeLine(LINE)
+  output.writeLine("\n", LINE, "\n     IDENTITY\n", LINE)
+  output.writeLine("Name: " & $root["FirstName", GffCExoLocString] & " " &
+    $root["LastName", GffCExoLocString]) #substr!
+  output.writeLine("Race: " & $root["Race", byte])
+  output.writeLine("Gender: " & $root["Gender", byte])
+  output.writeLine("Age: ") # & $root["Age", int]) # how to cast this value?
+  output.writeLine("Description: " & $root["Description", GffCExoLocString])
+  output.writeLine("Subrace: " & $root["Subrace", GFFCExoString])
+  output.writeLine("Deity: " & $root["Deity", GFFCExoString])
+  output.writeLine("\n", LINE, "\n     FINAL BUILD\n", LINE)
   
   output.writeLine("\nCLASSES:")
   # loop for classes in list and output them, classtype to determinate by 2da?
   
   output.writeLine("\nABILITIES:")
-  output.writeLine("  Str: ")
-  output.writeLine("  Dex: ")
-  output.writeLine("  Con: ")
-  output.writeLine("  Int: ")
-  output.writeLine("  Wis: ")
-  output.writeLine("  Cha: ")
+  output.writeLine("  Str: " & $root["Str", byte])
+  output.writeLine("  Dex: " & $root["Dex", byte])
+  output.writeLine("  Con: " & $root["Con", byte])
+  output.writeLine("  Int: " & $root["Int", byte])
+  output.writeLine("  Wis: " & $root["Wis", byte])
+  output.writeLine("  Cha: " & $root["Cha", byte])
   
-  output.writeLine("\nSTATISTICS:")
-  output.writeLine("  Hit Points: ")
-  output.writeLine("  AC: ")
-  output.writeLine("  Will Save: ")
-  output.writeLine("  Fort. Save: ")
-  output.writeLine("  Ref. Save: ")
+  output.writeLine("\nSTATISTICS:") # how to cast shorts?
+  output.writeLine("  Hit Points: \n  AC: \n  Will Save: \n  Fort. Save: \n  Ref. Save: ")
+  #[output.writeLine("  Hit Points: " & $root["MaxHitPoints", short])
+  output.writeLine("  AC: " & $root["ArmorClass", short])
+  output.writeLine("  Will Save: " & $root["WillSaveThrow", short])
+  output.writeLine("  Fort. Save: " & $root["FortSaveThrow", short])
+  output.writeLine("" & $root["RefSaveThrow", short]) ]#
   
   output.writeLine("\nSKILLS:")
   

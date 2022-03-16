@@ -1,11 +1,12 @@
+
 -----------------------
      IDENTITY
 -----------------------
 Name: [4294967295]{0: "Jacob"} [4294967295]{0: "Chaal"}
-Race: 
-Gender: 
+Race: 6
+Gender: 0
 Age: 
-Description: 
+Description: [4294967295]{0: "Your only hope for fame and fortune, and to escape the life of a commoner, was to become an adventurer. Guided by your goals and dreams, you have set off in search of excitement."}
 Subrace: 
 Deity: 
 
@@ -16,12 +17,12 @@ Deity:
 CLASSES:
 
 ABILITIES:
-  Str: 
-  Dex: 
-  Con: 
-  Int: 
-  Wis: 
-  Cha: 
+  Str: 10
+  Dex: 14
+  Con: 14
+  Int: 20
+  Wis: 10
+  Cha: 9
 
 STATISTICS:
   Hit Points: 
