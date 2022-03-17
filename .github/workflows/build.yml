@@ -2,19 +2,19 @@
 name: Github Actions Build
 
 # Controls when the workflow will run
-on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - '.gitignore'
-      - '**.md'
-      - 'examples/**'
-  pull_request:
-    paths-ignore:
-      - '.gitignore'    
-      - '**.md'
-      - 'examples/**'      
+on: [push, pull_request] # those ignore-pathes don't work correctly?!?
+#  push:
+#    branches:
+#      - master
+#    paths-ignore:
+#      - '.gitignore'
+#      - '**.md'
+#      - 'examples/**'
+#  pull_request:
+#    paths-ignore:
+#      - '.gitignore'    
+#      - '**.md'
+#      - 'examples/**'      
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
