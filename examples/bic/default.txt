@@ -5,7 +5,7 @@
 Name: [4294967295]{0: "Jacob"} [4294967295]{0: "Chaal"}
 Race: 6
 Gender: 0
-Age: 
+Age: 42
 Description: [4294967295]{0: "Your only hope for fame and fortune, and to escape the life of a commoner, was to become an adventurer. Guided by your goals and dreams, you have set off in search of excitement."}
 Subrace: 
 Deity: 
@@ -25,11 +25,14 @@ ABILITIES:
   Cha: 9
 
 STATISTICS:
-  Hit Points: 
-  AC: 
-  Will Save: 
-  Fort. Save: 
-  Ref. Save: 
+  Aligment: 50 / 15
+  Experience: 0
+  Hit Points: 114
+  Base Att. Bonus: 7
+  Nat. AC/Act. AC: 0 / 21
+  Will Save/Bonus: 11 / 0
+  Fort. Save/Bonus: 12 / 0
+  Ref. Save/Bonus: 6 / 0
 
 SKILLS:
 

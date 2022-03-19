@@ -23,7 +23,7 @@ if not isNil(output):
     $root["LastName", GffCExoLocString]) #substr!
   output.writeLine("Race: " & $root["Race", byte])
   output.writeLine("Gender: " & $root["Gender", byte])
-  output.writeLine("Age: ") # & $root["Age", int]) # how to cast this value?
+  output.writeLine("Age: " & $root["Age", 0.GffInt])
   output.writeLine("Description: " & $root["Description", GffCExoLocString])
   output.writeLine("Subrace: " & $root["Subrace", GFFCExoString])
   output.writeLine("Deity: " & $root["Deity", GFFCExoString])
@@ -40,13 +40,16 @@ if not isNil(output):
   output.writeLine("  Wis: " & $root["Wis", byte])
   output.writeLine("  Cha: " & $root["Cha", byte])
   
-  output.writeLine("\nSTATISTICS:") # how to cast shorts?
-  output.writeLine("  Hit Points: \n  AC: \n  Will Save: \n  Fort. Save: \n  Ref. Save: ")
-  #[output.writeLine("  Hit Points: " & $root["MaxHitPoints", short])
-  output.writeLine("  AC: " & $root["ArmorClass", short])
-  output.writeLine("  Will Save: " & $root["WillSaveThrow", short])
-  output.writeLine("  Fort. Save: " & $root["FortSaveThrow", short])
-  output.writeLine("" & $root["RefSaveThrow", short]) ]#
+  output.writeLine("\nSTATISTICS:")
+  output.writeLine("  Aligment: " & $root["LawfulChaotic", byte] & " / " & $root["GoodEvil", byte])
+  output.writeLine("  Experience: " & $root["Experience", 0.GffWord])
+  output.writeLine("  Hit Points: " & $root["MaxHitPoints", 0.GffShort])
+  #output.writeLine("  Num. Attacks: " & $root["NumAttacks", byte])
+  output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", byte])
+  output.writeLine("  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " & $root["ArmorClass", 0.GffShort])
+  output.writeLine("  Will Save/Bonus: " & $root["WillSaveThrow", 0.GffChar] & " / " & $root["willbonus", 0.GffShort])
+  output.writeLine("  Fort. Save/Bonus: " & $root["FortSaveThrow", 0.GffChar] & " / " & $root["fortbonus", 0.GffShort])
+  output.writeLine("  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " & $root["refbonus", 0.GffShort])
   
   output.writeLine("\nSKILLS:")
   
