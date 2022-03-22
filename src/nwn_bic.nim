@@ -5,6 +5,16 @@ import os, strutils, streams
 # declare constants
 const LINE = "-----------------------"
 
+#[ proc decrep(s: string): string =
+  var one = find(s, '[')
+  let next = find(s, '"', one + 1)
+  s.delete(one..next)
+  
+  one = find(s, '"')
+  next = find(s, ']', one + 1)
+  s.delete(one..next)
+  result s ]# # how to cut them down in one hit?
+
 # define help or failure msg whilst using
 if paramCount() == 0:
   quit("""Extracts the way you or someone leveled up the given
@@ -16,11 +26,19 @@ Usage:
 # get cmd params
 let args = paramStr(1)
 let root = openFileStream(args).readGffRoot(false)
-var output = newFileStream("default.txt", fmWrite)
+var (dir, name, ext)= splitFile(args)
+var output = newFileStream(name & ".txt", fmWrite)
 if not isNil(output):
-  output.writeLine("\n", LINE, "\n     IDENTITY\n", LINE)
+  output.writeLine(LINE, "\n     IDENTITY\n", LINE)
+  
+  var found = $root["FirstName", GffCExoLocString]
+  var first = find(found, '[')
+  var last = find(found, '"', first + 1)
+  found.delete(first..last)
+  echo $found & " " & $first & " " & $last
+  
   output.writeLine("Name: " & $root["FirstName", GffCExoLocString] & " " &
-    $root["LastName", GffCExoLocString]) #substr!
+    $root["LastName", GffCExoLocString]) #substr?
   output.writeLine("Race: " & $root["Race", byte])
   output.writeLine("Gender: " & $root["Gender", byte])
   output.writeLine("Age: " & $root["Age", 0.GffInt])
@@ -41,15 +59,20 @@ if not isNil(output):
   output.writeLine("  Cha: " & $root["Cha", byte])
   
   output.writeLine("\nSTATISTICS:")
-  output.writeLine("  Aligment: " & $root["LawfulChaotic", byte] & " / " & $root["GoodEvil", byte])
-  output.writeLine("  Experience: " & $root["Experience", 0.GffWord])
+  output.writeLine("  Aligment: " & $root["LawfulChaotic", byte] & " / " &
+    $root["GoodEvil", byte])
+  output.writeLine("  Experience: " & $root["Experience", 0.GffDWord])
   output.writeLine("  Hit Points: " & $root["MaxHitPoints", 0.GffShort])
   #output.writeLine("  Num. Attacks: " & $root["NumAttacks", byte])
   output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", byte])
-  output.writeLine("  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " & $root["ArmorClass", 0.GffShort])
-  output.writeLine("  Will Save/Bonus: " & $root["WillSaveThrow", 0.GffChar] & " / " & $root["willbonus", 0.GffShort])
-  output.writeLine("  Fort. Save/Bonus: " & $root["FortSaveThrow", 0.GffChar] & " / " & $root["fortbonus", 0.GffShort])
-  output.writeLine("  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " & $root["refbonus", 0.GffShort])
+  output.writeLine("  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " &
+    $root["ArmorClass", 0.GffShort])
+  output.writeLine("  Will Save/Bonus: " & $root["WillSaveThrow", 0.GffChar] & " / " &
+    $root["willbonus", 0.GffShort])
+  output.writeLine("  Fort. Save/Bonus: " & $root["FortSaveThrow", 0.GffChar] & " / " &
+    $root["fortbonus", 0.GffShort])
+  output.writeLine("  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " &
+    $root["refbonus", 0.GffShort])
   
   output.writeLine("\nSKILLS:")
   

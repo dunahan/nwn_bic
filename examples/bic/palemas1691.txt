@@ -1,0 +1,233 @@
+
+-----------------------
+     IDENTITY
+-----------------------
+
+Name: Jacob Chaal
+Race: Mensch
+Gender: Männlich
+Age: 42
+Description: Your only hope for fame and fortune, and to escape the life of a commoner, was to become an adventurer. Guided by your goals and dreams, you have set off in search of excitement.
+Subrace: 
+Deity: 
+
+--------------------------
+     FINAL BUILD 
+--------------------------
+
+CLASSES:
+ - Magier (10), School: Nekromantie
+ - Bleicher Meister (5)
+
+ABILITIES:
+  Str: 10
+  Dex: 14
+  Con: 14
+  Int: 20
+  Wis: 10
+  Cha: 09
+STATISTICS:
+  Hit Points: 114
+  AC: 21
+  Will Save: 11
+  Fort. Save: 12
+  Ref. Save: 6
+SKILLS:
+ - Konzentration: 18
+ - Heilen: 5
+ - Verstecken: 3
+ - Lauschen: 17
+ - Sagenkunde: 18
+ - Überreden: 9
+ - Zauberkunde: 18
+ - Entdecken: 9
+ - Turnen: 1
+ - Handwerk (Rüstungsschmied): 5
+
+
+
+------------------------------
+     BUILD DETAILS 
+------------------------------
+
+STARTING ABILITIES:
+  Str: 10 (base 08+02)
+  Dex: 14 (base 08+06)
+  Con: 14 (base 08+06)
+  Int: 17 (base 11+06)
+  Wis: 10 (base 08+02)
+  Cha: 09 (base 08+01)
+
+------------------------------
+Level 1 - Magier
+Hitpoint dice: 4
+Skills:
+None
+
+Feats:
+ - (CLASS) Umgang mit Waffen (Magier)
+ - (RACE) Rasche Meisterschaft
+ - (CLASS) Vertrauten herbeirufen
+ - (CLASS) Schriftrolle anfertigen
+ - Mächtiger Zauberfokus (Nekromantie)
+ - Zauberfokus (Nekromantie)
+
+
+
+------------------------------
+Level 2 - Magier
+Hitpoint dice: 4
+Skills:
+None
+
+Feats:
+None
+
+
+------------------------------
+Level 3 - Magier
+Hitpoint dice: 4
+Skills:
+None
+
+Feats:
+ - Abhärtung
+
+
+
+------------------------------
+Level 4 - Bleicher Meister
+Hitpoint dice: 4
+Ability: Int
+Skills:
+None
+
+Feats:
+ - (CLASS) Knochenrüstung
+
+
+
+------------------------------
+Level 5 - Magier
+Hitpoint dice: 2
+Skills:
+None
+
+Feats:
+None
+
+
+------------------------------
+Level 6 - Magier
+Hitpoint dice: 3
+Skills:
+None
+
+Feats:
+ - Zauberstab herstellen
+ - Durchschlagende Zauber
+
+
+
+------------------------------
+Level 7 - Magier
+Hitpoint dice: 3
+Skills:
+None
+
+Feats:
+None
+
+
+------------------------------
+Level 8 - Bleicher Meister
+Hitpoint dice: 5
+Ability: Int
+Skills:
+None
+
+Feats:
+ - (CLASS) Tote beleben
+
+
+
+------------------------------
+Level 9 - Magier
+Hitpoint dice: 2
+Skills:
+None
+
+Feats:
+ - Mächtige Durchschlagende Zauber
+
+
+
+------------------------------
+Level 10 - Bleicher Meister
+Hitpoint dice: 3
+Skills:
+None
+
+Feats:
+ - (CLASS) Dunkelsicht
+
+
+
+------------------------------
+Level 11 - Magier
+Hitpoint dice: 4
+Skills:
+None
+
+Feats:
+None
+
+
+------------------------------
+Level 12 - Bleicher Meister
+Hitpoint dice: 6
+Ability: Int
+Skills:
+None
+
+Feats:
+ - (CLASS) Untote herbeizaubern
+ - Zauber verstärken
+
+
+
+------------------------------
+Level 13 - Magier
+Hitpoint dice: 3
+Skills:
+None
+
+Feats:
+None
+
+
+------------------------------
+Level 14 - Bleicher Meister
+Hitpoint dice: 4
+Skills:
+None
+
+Feats:
+ - (CLASS) Todlose Kraft
+
+
+
+------------------------------
+Level 15 - Magier
+Hitpoint dice: 3
+Skills:
+None
+
+Feats:
+ - Arkane Verteidigung (Nekromantie)
+ - Trank brauen
+
+
+
+
+Character sheet exported using NWN Tool version 2.0.1 - http://nwntool.coucou.net

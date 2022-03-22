@@ -26,7 +26,7 @@ ABILITIES:
 
 STATISTICS:
   Aligment: 50 / 15
-  Experience: 0
+  Experience: 105032
   Hit Points: 114
   Base Att. Bonus: 7
   Nat. AC/Act. AC: 0 / 21

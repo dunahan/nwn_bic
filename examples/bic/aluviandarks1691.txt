@@ -1,0 +1,77 @@
+
+-----------------------
+     IDENTITY
+-----------------------
+
+Name: Aluvian Darkstar
+Race: Elf
+Gender: Weiblich
+Age: 120
+Description: Wanderlust has recently lured you to enter human lands against your family's advice, and your own better judgment. You plan to show these short-lived humans and filthy dwarves what a real elf is made of.
+Subrace: 
+Deity: 
+
+--------------------------
+     FINAL BUILD 
+--------------------------
+
+CLASSES:
+ - Magier (1), School: Allgemein
+
+ABILITIES:
+  Str: 10
+  Dex: 16
+  Con: 12
+  Int: 16
+  Wis: 12
+  Cha: 10
+STATISTICS:
+  Hit Points: 5
+  AC: 13
+  Will Save: 3
+  Fort. Save: 1
+  Ref. Save: 3
+SKILLS:
+ - Konzentration: 4
+ - Sagenkunde: 4
+ - Leise bewegen: 2
+ - Zauberkunde: 4
+ - Entdecken: 2
+
+
+
+------------------------------
+     BUILD DETAILS 
+------------------------------
+
+STARTING ABILITIES:
+  Str: 10 (base 08+02)
+  Dex: 16 (base 10+06)
+  Con: 12 (base 06+06)
+  Int: 16 (base 11+05)
+  Wis: 12 (base 08+04)
+  Cha: 10 (base 08+02)
+
+------------------------------
+Level 1 - Magier
+Hitpoint dice: 4
+Skills:
+None
+
+Feats:
+ - (CLASS) Umgang mit Waffen (Magier)
+ - (RACE) Immunität gegen Schlaf
+ - (RACE) Widerstandskraft gegen Bezauberung
+ - (RACE) Fertigkeitsvertrautheit (Lauschen)
+ - (RACE) Fertigkeitsvertrautheit (Suchen)
+ - (RACE) Fertigkeitsvertrautheit (Entdecken)
+ - (RACE) Scharfe Sinne
+ - (RACE) Umgang mit Waffen (Elf)
+ - (CLASS) Vertrauten herbeirufen
+ - (RACE) Dämmersicht
+ - Im Kampf zaubern
+
+
+
+
+Character sheet exported using NWN Tool version 2.0.1 - http://nwntool.coucou.net
