@@ -5,16 +5,6 @@ import os, strutils, streams
 # declare constants
 const LINE = "-----------------------"
 
-#[ proc decrep(s: string): string =
-  var one = find(s, '[')
-  let next = find(s, '"', one + 1)
-  s.delete(one..next)
-  
-  one = find(s, '"')
-  next = find(s, ']', one + 1)
-  s.delete(one..next)
-  result s ]# # how to cut them down in one hit?
-
 # define help or failure msg whilst using
 if paramCount() == 0:
   quit("""Extracts the way you or someone leveled up the given
@@ -31,18 +21,26 @@ var output = newFileStream(name & ".txt", fmWrite)
 if not isNil(output):
   output.writeLine(LINE, "\n     IDENTITY\n", LINE)
   
-  var found = $root["FirstName", GffCExoLocString]
-  var first = find(found, '[')
-  var last = find(found, '"', first + 1)
-  found.delete(first..last)
-  echo $found & " " & $first & " " & $last
+  var start = 0
+  var first = $root["FirstName", GffCExoLocString]
+  delete(first, start..find(first, '"'))
+  delete(first, find(first, '"')..find(first, '}'))
   
-  output.writeLine("Name: " & $root["FirstName", GffCExoLocString] & " " &
-    $root["LastName", GffCExoLocString]) #substr?
+  # how to do this in a new func?
+  var last = $root["LastName", GffCExoLocString]
+  delete(last, start..find(last, '"'))
+  delete(last, find(last, '"')..find(last, '}'))
+  output.writeLine("Name: " & first & " " & last)
+
   output.writeLine("Race: " & $root["Race", byte])
   output.writeLine("Gender: " & $root["Gender", byte])
   output.writeLine("Age: " & $root["Age", 0.GffInt])
-  output.writeLine("Description: " & $root["Description", GffCExoLocString])
+
+  var description = $root["Description", GffCExoLocString]
+  delete(description, start..find(description, '"'))
+  delete(description, find(description, '"')..find(description, '}'))
+
+  output.writeLine("Description: " & description)
   output.writeLine("Subrace: " & $root["Subrace", GFFCExoString])
   output.writeLine("Deity: " & $root["Deity", GFFCExoString])
   output.writeLine("\n", LINE, "\n     FINAL BUILD\n", LINE)
