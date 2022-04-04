@@ -1,13 +1,14 @@
 # some includes like neverwinter/gff, std/os, strutils, streams
 import neverwinter/gff
 import os, strutils, streams
+import lil_helpers
 
 # declare constants
 const LINE = "-----------------------"
 
 # define help or failure msg whilst using
 if paramCount() == 0:
-  quit("""Extracts the way you or someone leveled up the given
+  quit("""Ext racts the way you or someone leveled up the given
 toon and prints it in a readable way to a text file.
 Usage:
   nwn_bic <bic>
@@ -46,6 +47,29 @@ if not isNil(output):
   output.writeLine("\n", LINE, "\n     FINAL BUILD\n", LINE)
   
   output.writeLine("\nCLASSES:")
+  var clist = root["ClassList", GffList]
+  var cls1 = -1
+  var cls2 = -1
+  var cls3 = -1
+  
+  cls1 = clist[0]["Class", GffInt]
+  if cls1 >= 0:
+    output.writeLine("class/lvl: " & $cls1 & " (" &
+      $clist[0]["ClassLevel", 0.GffShort] & ")")
+#   output.writeLine("schol nr1: " & $clist[0]["School", byte])
+  
+#[ cls2 = clist[1]["Class", GffInt]
+  if cls2 >= 0:
+    output.writeLine("class nr2: " & $cls2)
+    output.writeLine("level nr2: " & $clist[1]["ClassLevel", 0.GffShort])
+#   output.writeLine("schol nr2: " & $clist[1]["School", byte])
+  
+  cls3 = clist[2]["Class", GffInt]
+  if cls3 >= 0:
+    output.writeLine("class nr3: " & $cls3)
+    output.writeLine("level nr3: " & $clist[2]["ClassLevel", 0.GffShort])
+#   output.writeLine("schol nr3: " & $clist[2]["School", byte])
+]#
   # loop for classes in list and output them, classtype to determinate by 2da?
   
   output.writeLine("\nABILITIES:")
@@ -61,10 +85,11 @@ if not isNil(output):
     $root["GoodEvil", byte])
   output.writeLine("  Experience: " & $root["Experience", 0.GffDWord])
   output.writeLine("  Hit Points: " & $root["MaxHitPoints", 0.GffShort])
-  #output.writeLine("  Num. Attacks: " & $root["NumAttacks", byte])
+# output.writeLine("  Num. Attacks: " & $root["NumAttacks", byte])
   output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", byte])
-  output.writeLine("  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " &
-    $root["ArmorClass", 0.GffShort])
+# output.writeLine("  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " &
+#   $root["ArmorClass", 0.GffShort])  # works for 1.69 but not for EE?
+  output.writeLine("  Armor Class: " & $root["ArmorClass", 0.GffShort])
   output.writeLine("  Will Save/Bonus: " & $root["WillSaveThrow", 0.GffChar] & " / " &
     $root["willbonus", 0.GffShort])
   output.writeLine("  Fort. Save/Bonus: " & $root["FortSaveThrow", 0.GffChar] & " / " &

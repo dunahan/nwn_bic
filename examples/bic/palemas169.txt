@@ -14,6 +14,7 @@ Deity:
 -----------------------
 
 CLASSES:
+class/lvl: 10 (10)
 
 ABILITIES:
   Str: 10
@@ -28,7 +29,7 @@ STATISTICS:
   Experience: 105032
   Hit Points: 114
   Base Att. Bonus: 7
-  Nat. AC/Act. AC: 0 / 21
+  Armor Class: 21
   Will Save/Bonus: 11 / 0
   Fort. Save/Bonus: 12 / 0
   Ref. Save/Bonus: 6 / 0

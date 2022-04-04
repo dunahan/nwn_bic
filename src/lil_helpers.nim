@@ -1,3 +1,12 @@
+# cut down LocStrings
+#[
+proc CutLocString(s: string): string =
+  var start = 0
+  delete(s, start..find(s, '"'))
+  delete(s, find(s, '"')..find(s, '}'))
+  result s
+]#
+
 # get classname by int
 proc Classes(num: int): string =
   result = case num:
