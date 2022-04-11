@@ -2,8 +2,8 @@
      IDENTITY
 -----------------------
 Name: Jacob Chaal
-Race: 6
-Gender: 0
+Race: Human
+Gender: Male
 Age: 42
 Description: Your only hope for fame and fortune, and to escape the life of a commoner, was to become an adventurer. Guided by your goals and dreams, you have set off in search of excitement.
 Subrace: 
@@ -14,7 +14,7 @@ Deity:
 -----------------------
 
 CLASSES:
-class/lvl: 10 (10)
+ - Wizard (10)
 
 ABILITIES:
   Str: 10

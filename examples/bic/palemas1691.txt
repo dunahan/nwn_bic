@@ -1,8 +1,6 @@
-
 -----------------------
      IDENTITY
 -----------------------
-
 Name: Jacob Chaal
 Race: Mensch
 Gender: Männlich

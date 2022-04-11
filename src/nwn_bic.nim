@@ -1,7 +1,7 @@
 # some includes like neverwinter/gff, std/os, strutils, streams
 import neverwinter/gff
 import os, strutils, streams
-import lil_helpers
+import helper
 
 # declare constants
 const LINE = "-----------------------"
@@ -33,8 +33,8 @@ if not isNil(output):
   delete(last, find(last, '"')..find(last, '}'))
   output.writeLine("Name: " & first & " " & last)
 
-  output.writeLine("Race: " & $root["Race", byte])
-  output.writeLine("Gender: " & $root["Gender", byte])
+  output.writeLine("Race: " & bicRace(root["Race", byte]))
+  output.writeLine("Gender: " & bicGender(root["Gender", byte]))
   output.writeLine("Age: " & $root["Age", 0.GffInt])
 
   var description = $root["Description", GffCExoLocString]
@@ -54,7 +54,7 @@ if not isNil(output):
   
   cls1 = clist[0]["Class", GffInt]
   if cls1 >= 0:
-    output.writeLine("class/lvl: " & $cls1 & " (" &
+    output.writeLine(" - " & bicClass(cls1) & " (" &
       $clist[0]["ClassLevel", 0.GffShort] & ")")
 #   output.writeLine("schol nr1: " & $clist[0]["School", byte])
   
