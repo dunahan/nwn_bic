@@ -54,6 +54,7 @@ proc bicRace*(num: byte): string =
     else:
       "Unknown"
 
+
 #get gender by int
 proc bicGender*(num: byte): string =
   result = case num:
@@ -63,6 +64,7 @@ proc bicGender*(num: byte): string =
       "Female"
     else:
       "Unknown"
+
 
 # get classname by int
 proc bicClass*(num: int): string =
@@ -116,10 +118,94 @@ proc bicClass*(num: int): string =
     else:
       "Unknown"
 
-#proc bicAlignmRC*
+
+# get Alignment Lawful/Chaotic
+proc bicAlignmLC*(num: byte): string =
+  result = case num:
+   of 70..100:
+     "Lawful"
+   of 31..69:
+     "Neutral"
+   of 0..30:
+     "Chaotic"
+   else:
+     ""
 
 
-#proc bicAlignmGE*
+# get Alignment Good/Evil
+proc bicAlignmGE*(num: byte): string =
+  result = case num:
+   of 70..100:
+     "Good"
+   of 31..69:
+     "Neutral"
+   of 0..30:
+     "Evil"
+   else:
+     ""
+
+# get skill
+proc bicSkill*(num: int): string =
+  result = case num:
+    of 0:
+      "Animal Empathy"
+    of 1:
+      "Concentration"
+    of 2:
+      "DisableTrap"
+    of 3:
+      "Discipline"
+    of 4:
+      "Heal"
+    of 5:
+      "Hide"
+    of 6:
+      "Listen"
+    of 7:
+      "Lore"
+    of 8:
+      "MoveSilently"
+    of 9:
+      "OpenLock"
+    of 10:
+      "Parry"
+    of 11:
+      "Perform"
+    of 12:
+      "Persuade"
+    of 13:
+      "Pick Pocket"
+    of 14:
+      "Search"
+    of 15:
+      "Set Trap"
+    of 16:
+      "Spellcraft"
+    of 17:
+      "Spot"
+    of 18:
+      "Taunt"
+    of 19:
+      "Use Magic Device"
+    of 20:
+      "Appraise"
+    of 21:
+      "Tumble"
+    of 22:
+      "Craft Trap"
+    of 23:
+      "Bluff"
+    of 24:
+      "Intimidate"
+    of 25:
+      "Craft Armor"
+    of 26:
+      "Craft Weapon"
+    else:
+      "Unknown"
+
+
+# write line only if it has something with value?
 
 
 #[ cut down LocStrings
