@@ -1,13 +1,9 @@
-name: Build binaries and upload artifacts
+name: Create a release
 
 on:
   push:
-    branches:
-      - master
-    paths:
-      - .github/workflows/**
-      - "*.nimble"
-      - src/**
+    tags:
+      - 'v*'
 
 jobs:
   build-linux-win:
@@ -55,18 +51,6 @@ jobs:
           name: nwn_bic.windows.amd64.static
           path: nwn_bic.exe
 
-      - name: Compile debug build for Windows
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble build -d:mingw --passL:-static --dynlibOverrideAll nwn_bic
-          mv nwn_bic.exe nwn_bic-debug.exe
-          ls -l nwn_bic-debug.exe
-          file nwn_bic-debug.exe
-      - name: Upload Windows debug artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: debug.nwn_bic.windows.amd64.static
-          path: nwn_bic-debug.exe
-
       - name: Compile for Linux
         run: |
           PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble musl
@@ -78,18 +62,6 @@ jobs:
           name: nwn_bic.linux.amd64.static
           path: nwn_bic
 
-      - name: Compile debug build for Linux
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble build --gcc.exe:musl-gcc --gcc.linkerexe:musl-gcc --passL:-static --dynlibOverrideAll nwn_bic
-          mv nwn_bic nwn_bic-debug
-          ls -l nwn_bic-debug
-          file nwn_bic-debug
-      - name: Upload Linux debug artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: debug.nwn_bic.linux.amd64.static
-          path: nwn_bic-debug
-
   build-macos:
     runs-on: macos-latest
     env:
@@ -98,7 +70,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Cache nim, nimble
+      - name: Cache nimble
       # nim is installed to .nimble/bin/nim by choosenim
         uses: actions/cache@v2
         id: cache
@@ -127,13 +99,74 @@ jobs:
           name: nwn_bic.macos.amd64
           path: nwn_bic
 
-      - name: Compile debug build for macOS
-        run: |
-          PATH="~/.nimble/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble build nwn_bic
-          ls -l nwn_bic
-          file nwn_bic
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v2
+  release:
+    needs: [build-linux-win, build-macos]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v2
         with:
-          name: debug.nwn_bic.macos.amd64
-          path: nwn_bic
+          name: nwn_bic.linux.amd64.static
+
+      - name: Pack Linux artifact
+        # the executable flag is removed on artifact upload
+        run: |
+          chmod +x nwn_bic
+          zip nwn_bic.linux.amd64.static.zip nwn_bic
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: nwn_bic.windows.amd64.static
+
+      - name: Pack Windows artifact
+        run: zip nwn_bic.windows.amd64.static.zip nwn_bic.exe
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: nwn_bic.macos.amd64
+
+      - name: Pack macOS artifact
+        run: |
+          chmod +x nwn_bic
+          zip nwn_bic.macos.amd64.zip nwn_bic
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Linux release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: nwn_bic.linux.amd64.static.zip
+          asset_name: nwn_bic.linux.amd64.static.zip
+          asset_content_type: application/zip
+
+      - name: Upload macOS release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: nwn_bic.macos.amd64.zip
+          asset_name: nwn_bic.macos.amd64.zip
+          asset_content_type: application/zip
+
+      - name: Upload Windows release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: nwn_bic.windows.amd64.static.zip
+          asset_name: nwn_bic.windows.amd64.static.zip
+          asset_content_type: application/zip
