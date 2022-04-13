@@ -26,7 +26,11 @@ ABILITIES:
   Cha: 09
 
 STATISTICS:
+
+
   Hit Points: 114
+
+
   AC: 21
   Will Save: 11
   Fort. Save: 12

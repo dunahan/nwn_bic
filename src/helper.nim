@@ -215,7 +215,7 @@ proc bicSkill*(num: int): string =
     else:
       "Unknown"
 
-proc bicFeat*(num: word): string =
+proc bicFeat*(num: int): string =
   result = case num:
     of 0:
       "Alertness"
@@ -2273,7 +2273,7 @@ proc bicFeat*(num: word): string =
       "Unkown"
 
 # get Spell
-proc bicSpell*(num: word): string =
+proc bicSpell*(num: int): string =
   result = case num:
     of 0:
       "Acid Fog"

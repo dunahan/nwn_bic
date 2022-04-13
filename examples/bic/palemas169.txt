@@ -30,22 +30,22 @@ STATISTICS:
   Experience: 105032
   Hit Points: 114
   Base Att. Bonus: 7
-  Armor Class: 21
+  Nat. AC/Act. AC: 0 / 21
   Will Save/Bonus: 11 / 0
   Fort. Save/Bonus: 12 / 0
   Ref. Save/Bonus: 6 / 0
 
 SKILLS:
- - AnimalEmpathy: 
+ - Animal Empathy: 
  - Concentration: 
- - DisableTrap: 
+ - Disable Trap: 
  - Discipline: 
  - Heal: 
  - Hide: 
  - Listen: 
  - Lore: 
- - MoveSilently: 
- - OpenLock: 
+ - Move Silently: 
+ - Open Lock: 
  - Parry: 
  - Perform: 
  - Persuade: 
@@ -65,4 +65,28 @@ SKILLS:
  - Craft Weapon: 
 
 FEATS:
+ - Alertness
+ - Ambidexterity
+ - Armor Proficiency (heavy)
+ - Armor Proficiency (light)
+ - Armor Proficiency (medium)
+ - Called Shot
+ - Cleave
+ - Combat Casting
+ - Deflect Arrows
+ - Disarm
+ - Dodge
+ - Empower Spell
+ - Extend Spell
+ - Extra Turning
+ - Great Fortitude
+ - Improved Critical (club)
+ - Improved Disarm
+ - Improved Knockdown
+
+
+
 -----------------------
+     BUILD DETAILS
+-----------------------
+working on this section

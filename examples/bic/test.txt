@@ -2,8 +2,8 @@
      IDENTITY
 -----------------------
 Name: test 
-Race: 6
-Gender: 0
+Race: Human
+Gender: Male
 Age: 0
 Description: 
 Subrace: 
@@ -14,7 +14,7 @@ Deity:
 -----------------------
 
 CLASSES:
-class/lvl: 0 (1)
+ - Barbarian (1)
 
 ABILITIES:
   Str: 16
@@ -25,16 +25,6 @@ ABILITIES:
   Cha: 10
 
 STATISTICS:
-  Aligment: 50 / 50
+  Aligment: Neutral Neutral
   Experience: 0
   Hit Points: 14
-  Base Att. Bonus: 1
-  Armor Class: 12
-  Will Save/Bonus: 0 / 0
-  Fort. Save/Bonus: 2 / 0
-  Ref. Save/Bonus: 2 / 0
-
-SKILLS:
-
-FEATS:
------------------------
