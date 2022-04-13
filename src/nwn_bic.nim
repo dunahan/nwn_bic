@@ -109,7 +109,6 @@ if not isNil(output):
 -----------------------
      IDENTITY
 -----------------------
-
 Name: FirstName, LastName [GffCExoLocString]
 Race: Race [byte] > case switch? 2da readout?
 Gender: Gender [byte] > case switch?
@@ -117,15 +116,12 @@ Age: Age [int]
 Description: Description [GffCExoLocString]
 Subrace: Subrace [GFFCExoString]
 Deity: Deity [GFFCExoString]
-
 -----------------------
      FINAL BUILD
 -----------------------
-
 CLASSES: >> ClassList [list]
  - Class [int] >> case switch? 2da readout? + (ClassLevel [short]) >> Barbarian (1) or
  - Magier (1), School: Allgemein
-
 ABILITIES:
   Str: Str [byte]
   Dex: Dex [byte]
@@ -133,14 +129,12 @@ ABILITIES:
   Int: Int [byte]
   Wis: Wis [byte]
   Cha: Cha [byte]
-
 STATISTICS:
   Hit Points: MaxHitPoints [short]
   AC: ArmorClass [short]
   Will Save: WillSaveThrow [char] + willbonus [short]
   Fort. Save: FortSaveThrow [char] + fortbonus [short]
   Ref. Save: RefSaveThrow [char] + refbonus [short]
-
 SKILLS: >> SkillList [list] ? >> pre-defined and choosen if > 0?
  - Konzentration: Rank [byte] >>  1
  - Sagenkunde: Rank [byte]    >>  7
