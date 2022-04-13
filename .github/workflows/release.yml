@@ -9,7 +9,7 @@ jobs:
   build-linux-win:
     runs-on: ubuntu-20.04
     env:
-      NIMVER: "1.4.8"
+      NIMVER: "1.6.4"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -65,7 +65,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     env:
-      NIMVER: "1.4.8"
+      NIMVER: "1.6.4"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
