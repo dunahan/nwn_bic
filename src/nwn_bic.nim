@@ -38,22 +38,21 @@ if not isNil(output):
   var last = $root["LastName", GffCExoLocString]
   delete(last, start..find(last, '"'))
   delete(last, find(last, '"')..find(last, '}'))
-  output.writeLine("Name: " & first & " " & last)
-
-  output.writeLine("Race: " & bicRace(root["Race", byte]))
-  output.writeLine("Gender: " & bicGender(root["Gender", byte]))
-  output.writeLine("Age: " & $root["Age", 0.GffInt])
+  output.writeLine("Name: " & first & " " & last & "\n" &
+    "Race: " & bicRace(root["Race", byte]) & "\n" &
+    "Gender: " & bicGender(root["Gender", byte]) & "\n" &
+    "Age: " & $root["Age", 0.GffInt])
 
   var description = $root["Description", GffCExoLocString]
   delete(description, start..find(description, '"'))
   delete(description, find(description, '"')..find(description, '}'))
 
-  output.writeLine("Description: " & description)
-  output.writeLine("Subrace: " & $root["Subrace", GFFCExoString])
-  output.writeLine("Deity: " & $root["Deity", GFFCExoString])
-  output.writeLine("\n", LINE, "\n     FINAL BUILD\n", LINE)
-  
-  output.writeLine("\nCLASSES:")
+  output.writeLine("Description: " & description & "\n" &
+    "Subrace: " & $root["Subrace", GFFCExoString] & "\n" &
+    "Deity: " & $root["Deity", GFFCExoString] & "\n" &
+    "\n", LINE, "\n     FINAL BUILD\n", LINE & "\n" &
+    "\nCLASSES:")
+    
   var clist = root["ClassList", GffList]
   var nbrc = count($clist, "GffStruct")
   
@@ -64,28 +63,28 @@ if not isNil(output):
       $clist[c]["ClassLevel", c.GffShort] & ")")
 #   "School: " & $clist[c]["School", byte])
   
-  output.writeLine("\nABILITIES:")
-  output.writeLine("  Str: " & $root["Str", byte])
-  output.writeLine("  Dex: " & $root["Dex", byte])
-  output.writeLine("  Con: " & $root["Con", byte])
-  output.writeLine("  Int: " & $root["Int", byte])
-  output.writeLine("  Wis: " & $root["Wis", byte])
-  output.writeLine("  Cha: " & $root["Cha", byte])
+  output.writeLine("\nABILITIES:" & "\n" &
+    "  Str: " & $root["Str", byte] & "\n" &
+    "  Dex: " & $root["Dex", byte] & "\n" &
+    "  Con: " & $root["Con", byte] & "\n" &
+    "  Int: " & $root["Int", byte] & "\n" &
+    "  Wis: " & $root["Wis", byte] & "\n" &
+    "  Cha: " & $root["Cha", byte])
   
-  output.writeLine("\nSTATISTICS:")
-  output.writeLine("  Aligment: " & bicAlignmLC(root["LawfulChaotic", byte]) & " " &
+  output.writeLine("\nSTATISTICS:" & "\n" &
+    "  Aligment: " & bicAlignmLC(root["LawfulChaotic", byte]) & " " &
     bicAlignmGE(root["GoodEvil", byte]))
-  output.writeLine("  Experience: " & $root["Experience", 0.GffDWord])
-  output.writeLine("  Hit Points: " & $root["MaxHitPoints", 0.GffShort])
+  output.writeLine("  Experience: " & $root["Experience", 0.GffDWord] & "\n" &
+    "  Hit Points: " & $root["MaxHitPoints", 0.GffShort])
 # output.writeLine("  Num. Attacks: " & $root["NumAttacks", byte]) # is in gff, but not accessible?
-  output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", byte])
-  output.writeLine("  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " &
+  output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", byte] & "\n" &
+    "  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " &
     $root["ArmorClass", 0.GffShort])  # works for 1.69 but not for EE?
   output.writeLine("  Will Save/Bonus: " & $root["WillSaveThrow", 0.GffChar] & " / " &
-    $root["willbonus", 0.GffShort])
-  output.writeLine("  Fort. Save/Bonus: " & $root["FortSaveThrow", 0.GffChar] & " / " &
-    $root["fortbonus", 0.GffShort])
-  output.writeLine("  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " &
+    $root["willbonus", 0.GffShort] & "\n" &
+    "  Fort. Save/Bonus: " & $root["FortSaveThrow", 0.GffChar] & " / " &
+    $root["fortbonus", 0.GffShort] & "\n" &
+    "  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " &
     $root["refbonus", 0.GffShort])
   
   output.writeLine("\nSKILLS:")
