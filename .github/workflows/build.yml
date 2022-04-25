@@ -1,139 +1,76 @@
-name: Build binaries and upload artifacts
+name: build
 
 on:
   push:
+    paths-ignore:
+      - 'LICENSE'
+      - '*.md'
     branches:
       - master
-    paths:
-      - .github/workflows/**
-      - "*.nimble"
-      - src/**
+  pull_request:
+    paths-ignore:
+      - 'LICENSE'
+      - '*.md'
 
 jobs:
-  build-linux-win:
-    runs-on: ubuntu-20.04
-    env:
-      NIMVER: "1.6.4"
+  test-typescript:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache nim, nimble
-        uses: actions/cache@v2
-        id: cache
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          key: build-${{ runner.os }}-nim-${{ env.NIMVER }}
-          path: |
-            nim
-            ~/.nimble
-      - name: Install apt packages
-        run: sudo apt-get install -y --no-install-recommends binutils musl-tools mingw-w64
+          node-version: '16'
+      - name: Run test
+        run: npm test
 
-      - name: Install newer upx
-        run: |
-          wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz
-          tar xf upx-3.96-amd64_linux.tar.xz upx-3.96-amd64_linux/upx --strip-components 1
-          sudo mv upx /usr/bin/
-      - name: Download and setup nim, nimble
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir nim
-          cd nim
-          wget https://nim-lang.org/download/nim-$NIMVER-linux_x64.tar.xz
-          tar xf nim-$NIMVER-linux_x64.tar.xz
-      - name: Install nimble packages
-        run: PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" nimble install --depsOnly -y
-
-      - name: Compile for Windows
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble win
-          ls -l nwn_bic.exe
-          file nwn_bic.exe
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: nwn_bic.windows.amd64.static
-          path: nwn_bic.exe
-
-      - name: Compile debug build for Windows
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble build -d:mingw --passL:-static --dynlibOverrideAll nwn_bic
-          mv nwn_bic.exe nwn_bic-debug.exe
-          ls -l nwn_bic-debug.exe
-          file nwn_bic-debug.exe
-      - name: Upload Windows debug artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: debug.nwn_bic.windows.amd64.static
-          path: nwn_bic-debug.exe
-
-      - name: Compile for Linux
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble musl
-          ls -l nwn_bic
-          file nwn_bic
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: nwn_bic.linux.amd64.static
-          path: nwn_bic
-
-      - name: Compile debug build for Linux
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble build --gcc.exe:musl-gcc --gcc.linkerexe:musl-gcc --passL:-static --dynlibOverrideAll nwn_bic
-          mv nwn_bic nwn_bic-debug
-          ls -l nwn_bic-debug
-          file nwn_bic-debug
-      - name: Upload Linux debug artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: debug.nwn_bic.linux.amd64.static
-          path: nwn_bic-debug
-
-  build-macos:
-    runs-on: macos-latest
-    env:
-      NIMVER: "1.6.4"
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+        version:
+          - 1.0.0
+          - stable
+          - devel
+        exclude:
+          - os: macOS-latest
+            version: devel
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache nim, nimble
-      # nim is installed to .nimble/bin/nim by choosenim
-        uses: actions/cache@v2
-        id: cache
+      - uses: actions/checkout@v3
+      - uses: ./
         with:
-          key: build-${{ runner.os }}-nim-${{ env.NIMVER }}
-          path: |
-            ~/.choosenim
-            ~/.nimble
-      - name: Download and setup nim, nimble
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          curl https://nim-lang.org/choosenim/init.sh -o choosenim-init.sh
-          sh choosenim-init.sh -y
-          PATH="~/.nimble/bin:$PATH" choosenim $NIMVER
-      - name: Install nimble packages
-        run: PATH="~/.nimble/bin:$PATH" nimble install --depsOnly -y
+          nim-version: ${{ matrix.version }}
 
-      - name: Compile for macOS
-        run: |
-          PATH="~/.nimble/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble macos
-          ls -l nwn_bic
-          file nwn_bic
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: nwn_bic.macos.amd64
-          path: nwn_bic
+      - name: Print Nim version
+        run: nim -v
+      - name: Print Nimble version
+        run: nimble -v
+      - name: Run build test
+        run: nimble install -Y nimjson
+      - name: Run command
+        run: nimjson -h
 
-      - name: Compile debug build for macOS
-        run: |
-          PATH="~/.nimble/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble build nwn_bic
-          ls -l nwn_bic
-          file nwn_bic
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v2
+  test-glob-version:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - 1.2.x
+          - 1.x
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./
         with:
-          name: debug.nwn_bic.macos.amd64
-          path: nwn_bic
+          nim-version: ${{ matrix.version }}
+
+      - name: Print Nim version
+        run: nim -v
+      - name: Print Nimble version
+        run: nimble -v
+      - name: Run build test
+        run: nimble install -Y nimjson
+      - name: Run command
+        run: nimjson -h

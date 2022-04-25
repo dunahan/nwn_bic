@@ -1,172 +1,59 @@
-name: Create a release
-
+name: release
 on:
   push:
+    branches:
+      - master
     tags:
-      - 'v*'
+      - 'v*.*.*'
+  pull_request:
+    types:
+      - labeled
 
 jobs:
-  build-linux-win:
-    runs-on: ubuntu-20.04
-    env:
-      NIMVER: "1.6.4"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache nim, nimble
-        uses: actions/cache@v2
-        id: cache
-        with:
-          key: build-${{ runner.os }}-nim-${{ env.NIMVER }}
-          path: |
-            nim
-            ~/.nimble
-      - name: Install apt packages
-        run: sudo apt-get install -y --no-install-recommends binutils musl-tools mingw-w64
-
-      - name: Install newer upx
-        run: |
-          wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz
-          tar xf upx-3.96-amd64_linux.tar.xz upx-3.96-amd64_linux/upx --strip-components 1
-          sudo mv upx /usr/bin/
-      - name: Download and setup nim, nimble
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir nim
-          cd nim
-          wget https://nim-lang.org/download/nim-$NIMVER-linux_x64.tar.xz
-          tar xf nim-$NIMVER-linux_x64.tar.xz
-      - name: Install nimble packages
-        run: PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" nimble install --depsOnly -y
-
-      - name: Compile for Windows
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble win
-          ls -l nwn_bic.exe
-          file nwn_bic.exe
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: nwn_bic.windows.amd64.static
-          path: nwn_bic.exe
-
-      - name: Compile for Linux
-        run: |
-          PATH="$PWD/nim/nim-$NIMVER/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble musl
-          ls -l nwn_bic
-          file nwn_bic
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: nwn_bic.linux.amd64.static
-          path: nwn_bic
-
-  build-macos:
-    runs-on: macos-latest
-    env:
-      NIMVER: "1.6.4"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache nimble
-      # nim is installed to .nimble/bin/nim by choosenim
-        uses: actions/cache@v2
-        id: cache
-        with:
-          key: build-${{ runner.os }}-nim-${{ env.NIMVER }}
-          path: |
-            ~/.choosenim
-            ~/.nimble
-      - name: Download and setup nim, nimble
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          curl https://nim-lang.org/choosenim/init.sh -o choosenim-init.sh
-          sh choosenim-init.sh -y
-          PATH="~/.nimble/bin:$PATH" choosenim $NIMVER
-      - name: Install nimble packages
-        run: PATH="~/.nimble/bin:$PATH" nimble install --depsOnly -y
-
-      - name: Compile for macOS
-        run: |
-          PATH="~/.nimble/bin:$PATH" VERSION=`git rev-parse --short HEAD` nimble macos
-          ls -l nwn_bic
-          file nwn_bic
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: nwn_bic.macos.amd64
-          path: nwn_bic
-
   release:
-    needs: [build-linux-win, build-macos]
-    runs-on: ubuntu-20.04
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-latest
     steps:
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v2
+      - uses: actions/checkout@v3
+
+      # Bump version on merging Pull Requests with specific labels.
+      # (bump:major,bump:minor,bump:patch)
+      - id: bumpr
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: haya14busa/action-bumpr@v1
+
+      # Update corresponding major and minor tag.
+      # e.g. Update v1 and v1.2 when releasing v1.2.3
+      - uses: haya14busa/action-update-semver@v1
+        if: "!steps.bumpr.outputs.skip"
         with:
-          name: nwn_bic.linux.amd64.static
+          tag: ${{ steps.bumpr.outputs.next_version }}
 
-      - name: Pack Linux artifact
-        # the executable flag is removed on artifact upload
-        run: |
-          chmod +x nwn_bic
-          zip nwn_bic.linux.amd64.static.zip nwn_bic
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v2
+      # Get tag name.
+      - id: tag
+        uses: haya14busa/action-cond@v1
         with:
-          name: nwn_bic.windows.amd64.static
+          cond: "${{ startsWith(github.ref, 'refs/tags/') }}"
+          if_true: ${{ github.ref }}
+          if_false: ${{ steps.bumpr.outputs.next_version }}
 
-      - name: Pack Windows artifact
-        run: zip nwn_bic.windows.amd64.static.zip nwn_bic.exe
-
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: nwn_bic.macos.amd64
-
-      - name: Pack macOS artifact
-        run: |
-          chmod +x nwn_bic
-          zip nwn_bic.macos.amd64.zip nwn_bic
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
+      # Create release.
+      - uses: actions/create-release@v1
+        if: "steps.tag.outputs.value != ''"
         env:
+          # This token is provided by Actions, you do not need to create your own token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
+          tag_name: ${{ steps.tag.outputs.value }}
+          release_name: ${{ steps.tag.outputs.value }}
+          body: ${{ steps.bumpr.outputs.message }}
           draft: false
           prerelease: false
 
-      - name: Upload Linux release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: nwn_bic.linux.amd64.static.zip
-          asset_name: nwn_bic.linux.amd64.static.zip
-          asset_content_type: application/zip
-
-      - name: Upload macOS release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: nwn_bic.macos.amd64.zip
-          asset_name: nwn_bic.macos.amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Windows release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: nwn_bic.windows.amd64.static.zip
-          asset_name: nwn_bic.windows.amd64.static.zip
-          asset_content_type: application/zip
+  release-check:
+    if: github.event.action == 'labeled'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Post bumpr status comment
+        uses: haya14busa/action-bumpr@v1
