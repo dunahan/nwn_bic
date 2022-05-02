@@ -13,15 +13,15 @@ on:
       - '*.md'
 
 jobs:
-  test-typescript:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-      - name: Run test
-        run: npm test
+#  test-typescript:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - uses: actions/setup-node@v3
+#        with:
+#          node-version: '16'
+#      - name: Run test
+#        run: npm test
 
   test:
     runs-on: ${{ matrix.os }}
