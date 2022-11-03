@@ -26,6 +26,7 @@ jobs:
           path: |
             nim
             ~/.nimble
+
       - name: Install mingw
         if: matrix.bintype != 'linux'
         run: sudo apt-get install -y --no-install-recommends mingw-w64
@@ -37,6 +38,7 @@ jobs:
           cd nim
           wget https://nim-lang.org/download/nim-$NIMVER-linux_x64.tar.xz
           tar xf nim-$NIMVER-linux_x64.tar.xz
+
       - name: Set up PATH
         run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
 
@@ -51,7 +53,7 @@ jobs:
         if: matrix.bintype == 'linux'
         uses: actions/upload-artifact@v2
         with:
-          name: neverwinter.linux.amd64
+          name: nwn_bic.linux.amd64
           path: bin/*
 
       - name: Download Windows DLLs
@@ -61,6 +63,7 @@ jobs:
           cd dll
           wget https://nim-lang.org/download/dlls.zip
           unzip dlls.zip
+
       - name: Compile for Windows i386
         if: matrix.bintype == 'win-i386'
         # on Ubuntu the binary has no .exe extension for some reason
@@ -68,11 +71,12 @@ jobs:
           nimble build -d:release -d:mingw --cpu:i386
           for f in bin/*; do mv "$f" "$f.exe"; done
           for f in dll/*; do cp "$f" "bin/"; done
+
       - name: Upload Windows i386 artifact
         if: matrix.bintype == 'win-i386'
         uses: actions/upload-artifact@v2
         with:
-          name: neverwinter.windows.i386
+          name: nwn_bic.windows.i386
           path: bin/*
 
       - name: Compile for Windows amd64
@@ -81,11 +85,12 @@ jobs:
           nimble build -d:release -d:mingw --cpu:amd64
           for f in bin/*; do mv "$f" "$f.exe"; done
           for f in dll/*; do cp "$f" "bin/"; done
+
       - name: Upload Windows amd64 artifact
         if: matrix.bintype == 'win-amd64'
         uses: actions/upload-artifact@v2
         with:
-          name: neverwinter.windows.amd64
+          name: nwn_bic.windows.amd64
           path: bin/*
 
   build-macos:
@@ -102,6 +107,7 @@ jobs:
           path: |
             nim
             ~/.nimble
+
       - name: Download and build nim, add to PATH
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -114,6 +120,7 @@ jobs:
           bin/nim c koch
           ./koch boot -d:release
           ./koch tools
+
       - name: Set up PATH
         run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
 
@@ -126,7 +133,7 @@ jobs:
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v2
         with:
-          name: neverwinter.macos.amd64
+          name: nwn_bic.macos.amd64
           path: bin/*
 
   release:
@@ -136,7 +143,7 @@ jobs:
       - name: Download Linux artifact
         uses: actions/download-artifact@v2
         with:
-          name: neverwinter.linux.amd64
+          name: nwn_bic.linux.amd64
           path: bin-linux
 
       - name: Pack Linux artifact
@@ -144,38 +151,40 @@ jobs:
         working-directory: bin-linux
         run: |
           chmod +x *
-          zip neverwinter.linux.amd64.zip *
+          zip nwn_bic.linux.amd64.zip *
+
       - name: Download Windows i386 artifact
         uses: actions/download-artifact@v2
         with:
-          name: neverwinter.windows.i386
+          name: nwn_bic.windows.i386
           path: bin-windows-i386
 
       - name: Pack Windows i386 artifact
         working-directory: bin-windows-i386
-        run: zip neverwinter.windows.i386.zip *
+        run: zip nwn_bic.windows.i386.zip *
 
       - name: Download Windows amd64 artifact
         uses: actions/download-artifact@v2
         with:
-          name: neverwinter.windows.amd64
+          name: nwn_bic.windows.amd64
           path: bin-windows-amd64
 
       - name: Pack Windows amd64 artifact
         working-directory: bin-windows-amd64
-        run: zip neverwinter.windows.amd64.zip *
+        run: zip nwn_bic.windows.amd64.zip *
 
       - name: Download macOS artifact
         uses: actions/download-artifact@v2
         with:
-          name: neverwinter.macos.amd64
+          name: nwn_bic.macos.amd64
           path: bin-macos
 
       - name: Pack macOS artifact
         working-directory: bin-macos
         run: |
           chmod +x *
-          zip neverwinter.macosx.amd64.zip *
+          zip nwn_bic.macosx.amd64.zip *
+
       - name: Create release
         id: create_release
         uses: actions/create-release@v1
@@ -193,8 +202,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-linux/neverwinter.linux.amd64.zip
-          asset_name: neverwinter.linux.amd64.zip
+          asset_path: bin-linux/nwn_bic.linux.amd64.zip
+          asset_name: nwn_bic.linux.amd64.zip
           asset_content_type: application/zip
 
       - name: Upload Windows i386 release asset
@@ -203,8 +212,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-windows-i386/neverwinter.windows.i386.zip
-          asset_name: neverwinter.windows.i386.zip
+          asset_path: bin-windows-i386/nwn_bic.windows.i386.zip
+          asset_name: nwn_bic.windows.i386.zip
           asset_content_type: application/zip
 
       - name: Upload Windows amd64 release asset
@@ -213,8 +222,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-windows-amd64/neverwinter.windows.amd64.zip
-          asset_name: neverwinter.windows.amd64.zip
+          asset_path: bin-windows-amd64/nwn_bic.windows.amd64.zip
+          asset_name: nwn_bic.windows.amd64.zip
           asset_content_type: application/zip
 
       - name: Upload macOS release asset
@@ -223,6 +232,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-macos/neverwinter.macosx.amd64.zip
-          asset_name: neverwinter.macosx.amd64.zip
+          asset_path: bin-macos/nwn_bic.macosx.amd64.zip
+          asset_name: nwn_bic.macosx.amd64.zip
           asset_content_type: application/zip
