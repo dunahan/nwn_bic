@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Nim
         uses: jiro4989/setup-nim-action@v2
@@ -40,7 +40,7 @@ jobs:
           nimble -v
 
       - name: Cache Nimble packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nimble
           key: ${{ runner.os }}-nim-${{ vars.NIM_VERSION }}-${{ hashFiles('nwn_bic.nimble') }}
