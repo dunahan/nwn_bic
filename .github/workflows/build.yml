@@ -1,76 +1,114 @@
-name: build
+name: Build and smoke test
 
 on:
   push:
-    paths-ignore:
-      - 'LICENSE'
-      - '*.md'
     branches:
-      - master
+      - main
   pull_request:
-    paths-ignore:
-      - 'LICENSE'
-      - '*.md'
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NIM_VERSION: '1.6.4'
 
 jobs:
-#  test-typescript:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v3
-#      - uses: actions/setup-node@v3
-#        with:
-#          node-version: '16'
-#      - name: Run test
-#        run: npm test
-
-  test:
+  build-and-smoke-test:
+    name: ${{ matrix.os }} / Nim ${{ env.NIM_VERSION }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
           - windows-latest
-          - macOS-latest
-        version:
-          - 1.0.0
-          - stable
-          - devel
-        exclude:
-          - os: macOS-latest
-            version: devel
+          - macos-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Nim
+        uses: jiro4989/setup-nim-action@v2
         with:
-          nim-version: ${{ matrix.version }}
+          nim-version: ${{ env.NIM_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Print Nim version
-        run: nim -v
-      - name: Print Nimble version
-        run: nimble -v
-      - name: Run build test
-        run: nimble install -Y nimjson
-      - name: Run command
-        run: nimjson -h
+      - name: Show toolchain versions
+        run: |
+          nim -v
+          nimble -v
 
-  test-glob-version:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version:
-          - 1.2.x
-          - 1.x
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./
+      - name: Cache Nimble packages
+        uses: actions/cache@v4
         with:
-          nim-version: ${{ matrix.version }}
+          path: ~/.nimble
+          key: ${{ runner.os }}-nim-${{ env.NIM_VERSION }}-${{ hashFiles('nwn_bic.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-nim-${{ env.NIM_VERSION }}-
+            ${{ runner.os }}-nim-
 
-      - name: Print Nim version
-        run: nim -v
-      - name: Print Nimble version
-        run: nimble -v
-      - name: Run build test
-        run: nimble install -Y nimjson
-      - name: Run command
-        run: nimjson -h
+      - name: Install project dependencies
+        run: nimble install --depsOnly -Y
+
+      - name: Build release binary
+        run: nimble build -d:release -Y
+
+      - name: Verify binary exists
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            test -f bin/nwn_bic.exe
+          else
+            test -f bin/nwn_bic
+          fi
+
+      - name: Run CLI smoke test
+        shell: bash
+        run: |
+          set -eu
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            binary="bin/nwn_bic.exe"
+          else
+            binary="bin/nwn_bic"
+          fi
+
+          # The current CLI writes the output beside the process working directory.
+          # Keep the generated file outside the repository and verify it below.
+          smoke_dir="$RUNNER_TEMP/nwn_bic-smoke"
+          mkdir -p "$smoke_dir"
+          "$binary" "$GITHUB_WORKSPACE/examples/bic/test.bic"
+
+          test -f test.txt
+          test -s test.txt
+          grep -Fq 'IDENTITY' test.txt
+          grep -Fq 'FINAL BUILD' test.txt
+          grep -Fq 'ABILITIES' test.txt
+          grep -Fq 'STATISTICS' test.txt
+
+          mv test.txt "$smoke_dir/test.txt"
+
+      - name: Run larger-character smoke test
+        shell: bash
+        run: |
+          set -eu
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            binary="bin/nwn_bic.exe"
+          else
+            binary="bin/nwn_bic"
+          fi
+
+          smoke_dir="$RUNNER_TEMP/nwn_bic-smoke-large"
+          mkdir -p "$smoke_dir"
+          cd "$smoke_dir"
+          "$GITHUB_WORKSPACE/$binary" "$GITHUB_WORKSPACE/examples/bic/test1.bic"
+          test -f test1.txt
+          test -s test1.txt
+          grep -Fq 'IDENTITY' test1.txt
+          grep -Fq 'FINAL BUILD' test1.txt
+          grep -Fq 'BUILD DETAILS' test1.txt
