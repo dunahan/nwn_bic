@@ -8,8 +8,8 @@ bin           = @["nwn_bic"]
 
 
 # Dependencies
-requires "nim >= 1.6.4"
-requires "neverwinter >= 1.4.2"
+requires "nim >= 2.0.0"
+requires "neverwinter == 2.2.0"
 
 task win, "Cross compile windows binary with mingw":
   echo "Building windows binary with mingw"
