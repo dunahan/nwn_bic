@@ -49,7 +49,7 @@ jobs:
             ${{ runner.os }}-nim-
 
       - name: Install project dependencies
-        run: nimble install --depsOnly -Y
+        run: nimble install --depsOnly -Y --passNim:"--passC:-Wno-error=incompatible-pointer-types"
 
       - name: Check Nim formatting
         shell: bash
