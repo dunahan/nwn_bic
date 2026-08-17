@@ -135,27 +135,27 @@ proc bicClass*(num: int): string =
 # get Alignment Lawful/Chaotic
 proc bicAlignmLC*(num: byte): string =
   result = case num:
-   of 70..100:
-     "Lawful"
-   of 31..69:
-     "Neutral"
-   of 0..30:
-     "Chaotic"
-   else:
-     ""
+    of 70..100:
+      "Lawful"
+    of 31..69:
+      "Neutral"
+    of 0..30:
+      "Chaotic"
+    else:
+      ""
 
 
 # get Alignment Good/Evil
 proc bicAlignmGE*(num: byte): string =
   result = case num:
-   of 70..100:
-     "Good"
-   of 31..69:
-     "Neutral"
-   of 0..30:
-     "Evil"
-   else:
-     ""
+    of 70..100:
+      "Good"
+    of 31..69:
+      "Neutral"
+    of 0..30:
+      "Evil"
+    else:
+      ""
 
 # get skill
 proc bicSkill*(num: int): string =
