@@ -54,6 +54,24 @@ jobs:
       - name: Install project dependencies
         run: nimble install --depsOnly -Y
 
+      - name: Check Nim formatting
+        shell: bash
+        run: |
+          set -eu
+
+          nimpretty --backup:off src/*.nim
+
+          if ! git diff --quiet -- src; then
+            echo "Nim source files are not formatted with nimpretty."
+            echo "Run the following command locally and commit the result:"
+            echo "nimpretty --backup:off src/*.nim"
+            git diff -- src
+            exit 1
+          fi
+
+      - name: Build release binary
+        run: nimble build -d:release -Y
+
       - name: Build release binary
         run: nimble build -d:release -Y
 
