@@ -4,8 +4,8 @@ author        = "dunahan"
 description   = "nwn_bic prints lvlup structure of nwn toons"
 license       = "MIT"
 srcDir        = "src"
+binDir        = "bin"
 bin           = @["nwn_bic"]
-
 
 # Dependencies
 requires "nim >= 2.0.0"
