@@ -114,7 +114,13 @@ if not isNil(output):
     if rank > 0:
       output.writeLine(" - " & bicSkill(c) & ": " & $rank)
 
-  # also those feats
+  # feats: unlike SkillList, FeatList entries DO carry their own ID in a
+  # "Feat" field (word/uint16) -- list position is just insertion order, not
+  # the feat ID. The loop index was wrong here (P0.2): on the real feat table
+  # most low indices (0..10) are themselves valid-but-different feat IDs, so
+  # the old code didn't fail loudly, it silently printed plausible wrong
+  # feats. GffWord doesn't implicitly convert to the `int` bicFeat() expects
+  # (unlike GffInt), so an explicit .int is required.
   output.writeLine("\nFEATS:")
   var flist = root["FeatList", GffList]
   var nbrf = count($flist, "GffStruct")
@@ -122,7 +128,8 @@ if not isNil(output):
   c = 0
   for i in countup(1, nbrf):
     c = i - 1
-    output.writeLine(" - " & bicFeat(c))
+    let featId = flist[c]["Feat", GffWord]
+    output.writeLine(" - " & bicFeat(featId.int))
 
   # those section should later show the build process per taken level
   output.writeLine("\n\n\n" & LINE, "\n     BUILD DETAILS\n", LINE)
