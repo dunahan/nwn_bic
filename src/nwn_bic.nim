@@ -97,7 +97,12 @@ if not isNil(output):
     "  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " &
     $root["refbonus", 0.GffShort])
 
-  # those skills arn't finally
+  # skills: list position doubles as the skill ID (matches skills.2da / the
+  # bicSkill() table order), so the loop index was already right -- the real
+  # bug was that Rank was never read, and every skill printed regardless of
+  # value. Fixed: read Rank per index, print only what's actually invested in
+  # (matches the reference tool, which does the same).
+  # ponytail: 1.69 skill table only (27 entries); EE adds more, add when EE support lands.
   output.writeLine("\nSKILLS:")
   var slist = root["SkillList", GffList]
   var nbrs = count($slist, "GffStruct")
@@ -105,7 +110,9 @@ if not isNil(output):
   c = 0
   for i in countup(1, nbrs):
     c = i - 1
-    output.writeLine(" - " & bicSkill(c) & ": ")
+    let rank = slist[c]["Rank", byte]
+    if rank > 0:
+      output.writeLine(" - " & bicSkill(c) & ": " & $rank)
 
   # also those feats
   output.writeLine("\nFEATS:")
