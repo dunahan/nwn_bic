@@ -123,4 +123,5 @@ jobs:
           test -s test1.txt
           grep -Fq 'IDENTITY' test1.txt
           grep -Fq 'FINAL BUILD' test1.txt
+          grep -Fq 'Discipline: 4' test1.txt
           grep -Fq 'BUILD DETAILS' test1.txt
