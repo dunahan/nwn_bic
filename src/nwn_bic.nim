@@ -26,6 +26,7 @@ Usage:
 # now contine
 let root = openFileStream(args).readGffRoot(false)
 var (dir, name, ext) = splitFile(args)
+# ponytail: dir was unused before -- output landed in cwd instead of beside the input .bic
 var output = newFileStream(name & ".txt", fmWrite)
 
 # if the file is created, then begin with writing down
@@ -97,13 +98,9 @@ if not isNil(output):
     "  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " &
     $root["refbonus", 0.GffShort])
 
-  # skills: list position doubles as the skill ID (matches skills.2da / the
-  # bicSkill() table order), so the loop index was already right -- the real
-  # bug was that Rank was never read, and every skill printed regardless of
-  # value. Fixed: read Rank per index, print only what's actually invested in
-  # (matches the reference tool, which does the same).
-  # ponytail: 1.69 skill table only (27 entries); EE adds more, add when EE support lands.
+  # skills: list position is the skill ID (matches skills.2da / bicSkill order); print only Rank > 0, matching the reference tool
   output.writeLine("\nSKILLS:")
+  # ponytail: 1.69 skill table only (27 entries); EE adds more, add when EE support lands.
   var slist = root["SkillList", GffList]
   var nbrs = count($slist, "GffStruct")
   i = 0
@@ -114,14 +111,9 @@ if not isNil(output):
     if rank > 0:
       output.writeLine(" - " & bicSkill(c) & ": " & $rank)
 
-  # feats: unlike SkillList, FeatList entries DO carry their own ID in a
-  # "Feat" field (word/uint16) -- list position is just insertion order, not
-  # the feat ID. The loop index was wrong here (P0.2): on the real feat table
-  # most low indices (0..10) are themselves valid-but-different feat IDs, so
-  # the old code didn't fail loudly, it silently printed plausible wrong
-  # feats. GffWord doesn't implicitly convert to the `int` bicFeat() expects
-  # (unlike GffInt), so an explicit .int is required.
+  # feats: unlike SkillList, each FeatList struct carries its own ID in a "Feat" field -- list position is just insertion order
   output.writeLine("\nFEATS:")
+  # ponytail: GffWord (uint16) doesn't implicitly convert to int like GffInt does, hence the .int below
   var flist = root["FeatList", GffList]
   var nbrf = count($flist, "GffStruct")
   i = 0
