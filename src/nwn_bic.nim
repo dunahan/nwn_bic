@@ -94,7 +94,7 @@ if not isNil(output):
     "  Hit Points: " & $root["MaxHitPoints", 0.GffShort])
 # output.writeLine("  Num. Attacks: " & $root["NumAttacks", byte])  # is in gff, but not accessible?
   output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", byte] & "\n" &
-    "  Nat. AC/Act. AC: " & $root["NaturalAC", byte] & " / " & # is sometimes in gff, but not ever accessible?? then it throws the messy key-error :-(
+    "  Nat. AC/Act. AC: " & # $root["NaturalAC", byte] & " / " & # commented out until a solution is possible
     $root["ArmorClass", 0.GffShort]) # works for 1.69 but not for EE?
   output.writeLine("  Will Save/Bonus: " & $root["WillSaveThrow", 0.GffChar] & " / " &
     $root["willbonus", 0.GffShort] & "\n" &
