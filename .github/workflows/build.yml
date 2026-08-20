@@ -133,3 +133,26 @@ jobs:
           grep -Fq 'BUILD DETAILS' "$generated"
 
           mv "$generated" "$smoke_dir/test1.txt"
+
+      - name: Run error-handling smoke test
+        shell: bash
+        run: |
+          set -eu
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            binary="bin/nwn_bic.exe"
+          else
+            binary="bin/nwn_bic"
+          fi
+
+          # A missing input file must fail cleanly (P0.4 fix): non-zero exit,
+          # a readable "Error: ..." message on stderr, no stack trace, and no
+          # output file created. This exercises the same try/except path a
+          # malformed/corrupt .bic would hit.
+          err_file="$RUNNER_TEMP/nwn_bic-missing-input.err"
+          if "$binary" "$RUNNER_TEMP/nwn_bic-does-not-exist.bic" 2> "$err_file"; then
+            echo "expected a non-zero exit code for a missing input file"
+            exit 1
+          fi
+          grep -Fq 'Error:' "$err_file"
+          test ! -f "$RUNNER_TEMP/nwn_bic-does-not-exist.txt"
