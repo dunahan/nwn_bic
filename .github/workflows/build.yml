@@ -89,20 +89,22 @@ jobs:
             binary="bin/nwn_bic"
           fi
 
-          # The current CLI writes the output beside the process working directory.
-          # Keep the generated file outside the repository and verify it below.
+          # The CLI writes the output beside the input .bic file (P0.3 fix).
+          # Move the generated file out of the checked-out tree afterward so
+          # the repo working copy stays clean.
           smoke_dir="$RUNNER_TEMP/nwn_bic-smoke"
           mkdir -p "$smoke_dir"
+          generated="$GITHUB_WORKSPACE/examples/bic/test.txt"
           "$binary" "$GITHUB_WORKSPACE/examples/bic/test.bic"
 
-          test -f test.txt
-          test -s test.txt
-          grep -Fq 'IDENTITY' test.txt
-          grep -Fq 'FINAL BUILD' test.txt
-          grep -Fq 'ABILITIES' test.txt
-          grep -Fq 'STATISTICS' test.txt
+          test -f "$generated"
+          test -s "$generated"
+          grep -Fq 'IDENTITY' "$generated"
+          grep -Fq 'FINAL BUILD' "$generated"
+          grep -Fq 'ABILITIES' "$generated"
+          grep -Fq 'STATISTICS' "$generated"
 
-          mv test.txt "$smoke_dir/test.txt"
+          mv "$generated" "$smoke_dir/test.txt"
 
       - name: Run larger-character smoke test
         shell: bash
@@ -115,12 +117,42 @@ jobs:
             binary="bin/nwn_bic"
           fi
 
+          # No `cd` into an isolated dir needed here anymore: the CLI writes
+          # beside the input file regardless of cwd (P0.3 fix), so the old
+          # cwd-isolation trick was only ever a workaround for that bug.
           smoke_dir="$RUNNER_TEMP/nwn_bic-smoke-large"
           mkdir -p "$smoke_dir"
-          cd "$smoke_dir"
+          generated="$GITHUB_WORKSPACE/examples/bic/test1.txt"
           "$GITHUB_WORKSPACE/$binary" "$GITHUB_WORKSPACE/examples/bic/test1.bic"
-          test -f test1.txt
-          test -s test1.txt
-          grep -Fq 'IDENTITY' test1.txt
-          grep -Fq 'FINAL BUILD' test1.txt
-          grep -Fq 'BUILD DETAILS' test1.txt
+          test -f "$generated"
+          test -s "$generated"
+          grep -Fq 'IDENTITY' "$generated"
+          grep -Fq 'FINAL BUILD' "$generated"
+          grep -Fq 'Discipline: 4' "$generated"
+          grep -Fq 'Armor Proficiency (light)' "$generated"
+          grep -Fq 'BUILD DETAILS' "$generated"
+
+          mv "$generated" "$smoke_dir/test1.txt"
+
+      - name: Run error-handling smoke test
+        shell: bash
+        run: |
+          set -eu
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            binary="bin/nwn_bic.exe"
+          else
+            binary="bin/nwn_bic"
+          fi
+
+          # A missing input file must fail cleanly (P0.4 fix): non-zero exit,
+          # a readable "Error: ..." message on stderr, no stack trace, and no
+          # output file created. This exercises the same try/except path a
+          # malformed/corrupt .bic would hit.
+          err_file="$RUNNER_TEMP/nwn_bic-missing-input.err"
+          if "$binary" "$RUNNER_TEMP/nwn_bic-does-not-exist.bic" 2> "$err_file"; then
+            echo "expected a non-zero exit code for a missing input file"
+            exit 1
+          fi
+          grep -Fq 'Error:' "$err_file"
+          test ! -f "$RUNNER_TEMP/nwn_bic-does-not-exist.txt"

@@ -24,9 +24,15 @@ Usage:
 """)
 
 # now contine
-let root = openFileStream(args).readGffRoot(false)
+let root =
+  try:
+    openFileStream(args).readGffRoot(false)
+  except CatchableError as e:
+    quit("Error: could not read '" & args & "' as a GFF/BIC file (" & e.msg & ")")
 var (dir, name, ext) = splitFile(args)
-var output = newFileStream(name & ".txt", fmWrite)
+# ponytail: dir was unused before -- output landed in cwd instead of beside the input .bic
+let outPath = dir / (name & ".txt")
+var output = newFileStream(outPath, fmWrite)
 
 # if the file is created, then begin with writing down
 if not isNil(output):
@@ -97,25 +103,30 @@ if not isNil(output):
     "  Ref. Save/Bonus: " & $root["RefSaveThrow", 0.GffChar] & " / " &
     $root["refbonus", 0.GffShort])
 
-  # those skills arn't finally
+  # skills: list position is the skill ID (matches skills.2da / bicSkill order); print only Rank > 0, matching the reference tool
   output.writeLine("\nSKILLS:")
+  # ponytail: 1.69 skill table only (27 entries); EE adds more, add when EE support lands.
   var slist = root["SkillList", GffList]
   var nbrs = count($slist, "GffStruct")
   i = 0
   c = 0
   for i in countup(1, nbrs):
     c = i - 1
-    output.writeLine(" - " & bicSkill(c) & ": ")
+    let rank = slist[c]["Rank", byte]
+    if rank > 0:
+      output.writeLine(" - " & bicSkill(c) & ": " & $rank)
 
-  # also those feats
+  # feats: unlike SkillList, each FeatList struct carries its own ID in a "Feat" field -- list position is just insertion order
   output.writeLine("\nFEATS:")
+  # ponytail: GffWord (uint16) doesn't implicitly convert to int like GffInt does, hence the .int below
   var flist = root["FeatList", GffList]
   var nbrf = count($flist, "GffStruct")
   i = 0
   c = 0
   for i in countup(1, nbrf):
     c = i - 1
-    output.writeLine(" - " & bicFeat(c))
+    let featId = flist[c]["Feat", GffWord]
+    output.writeLine(" - " & bicFeat(featId.int))
 
   # those section should later show the build process per taken level
   output.writeLine("\n\n\n" & LINE, "\n     BUILD DETAILS\n", LINE)
@@ -123,3 +134,5 @@ if not isNil(output):
 
   # finally were ready to close the file, due all is printed...
   output.close()
+else:
+  quit("Error: could not write output to '" & outPath & "'")
