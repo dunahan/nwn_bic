@@ -24,10 +24,15 @@ Usage:
 """)
 
 # now contine
-let root = openFileStream(args).readGffRoot(false)
+let root =
+  try:
+    openFileStream(args).readGffRoot(false)
+  except CatchableError as e:
+    quit("Error: could not read '" & args & "' as a GFF/BIC file (" & e.msg & ")")
 var (dir, name, ext) = splitFile(args)
 # ponytail: dir was unused before -- output landed in cwd instead of beside the input .bic
-var output = newFileStream(dir / (name & ".txt"), fmWrite)
+let outPath = dir / (name & ".txt")
+var output = newFileStream(outPath, fmWrite)
 
 # if the file is created, then begin with writing down
 if not isNil(output):
@@ -129,3 +134,5 @@ if not isNil(output):
 
   # finally were ready to close the file, due all is printed...
   output.close()
+else:
+  quit("Error: could not write output to '" & outPath & "'")
