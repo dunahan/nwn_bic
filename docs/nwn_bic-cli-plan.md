@@ -1,15 +1,34 @@
 # Plan: Vervollständigung des `nwn_bic`-CLI-Programms
 
-Stand: 18. August 2026
+Stand: 18. August 2026 (Plan) · **Update 20. August 2026: P0 (0.1–0.4) vollständig umgesetzt**
 Basis: Code-Review von `dunahan/nwn_bic` (main) + Abgleich mit der Lazy-Coding-Leiter aus `DietrichGebert/ponytail`
+
+> **Status-Update:** Alle vier P0-Punkte sind gefixt, jeweils real gegen die
+> gepinnte `neverwinter.nim`-Library (Tag `2.2.0`) kompiliert und ausgeführt,
+> nicht nur gelesen. Vollständige Herleitung, jede verworfene/korrigierte
+> Annahme und alle Testfälle: `docs/nwn_bic-cli-plan-status.md`. Dieses
+> Dokument bekommt hier nur die Kurzfassung je Punkt, damit der ursprüngliche
+> Plan als Nachschlagewerk erhalten bleibt statt dupliziert zu werden.
 
 ---
 
 ## 1. Kurzfassung
 
-`build.yml` baut jetzt zuverlässig auf allen drei Plattformen und führt sogar einen Smoke-Test aus – gute Basis. Das CLI selbst (`src/nwn_bic.nim` + `src/helper.nim`) ist aber noch ein Prototyp: Die IDENTITY- und ABILITIES-Abschnitte funktionieren, SKILLS und FEATS lesen den falschen Wert aus dem GFF (Schleifenindex statt echter ID), und BUILD DETAILS ist ein Platzhalter.
+`build.yml` baut jetzt zuverlässig auf allen drei Plattformen und führt sogar einen Smoke-Test aus – gute Basis. Das CLI selbst (`src/nwn_bic.nim` + `src/helper.nim`) war zum Zeitpunkt dieser Analyse noch ein Prototyp: Die IDENTITY- und ABILITIES-Abschnitte funktionierten, SKILLS und FEATS lasen den falschen Wert aus dem GFF (Schleifenindex statt echter ID), und BUILD DETAILS war ein Platzhalter.
+
+> **Update:** SKILLS- und FEATS-Bug sind gefixt (P0.1/P0.2), ebenso der
+> Ausgabepfad (P0.3) und die Fehlerbehandlung (P0.4). Details unten in
+> Abschnitt 5 und im Status-Dokument. BUILD DETAILS ist weiterhin ein
+> Platzhalter – das ist P1.1, noch offen.
 
 Der zweite, überraschend ergiebige Befund: **`helper.nim` ist mit 3671 Zeilen zu 90 % eine Übersetzungstabelle** (`bicFeat`: Zeilen 220–2277, `bicSpell`: Zeilen 2278–3671), die von Hand aus dem 1.69-Regelwerk abgetippt wurde – fest verdrahtet auf Englisch, mit `Unknown` als Fallback. Im Repo liegen unter `examples/2da/` (`feat.2da`, `skills.2da`, `spells.2da`) und `examples/tlk/{de,en}/` aber bereits genau die Originaldaten, aus denen diese Tabellen stammen – inklusive fertiger deutscher Übersetzung. Die Projektabhängigkeit `neverwinter` (schon in `nwn_bic.nimble`) bringt mit `neverwinter/twoda` und `neverwinter/tlk` fertige Parser für genau diese Formate mit.
+
+> **Update:** Beim P0.2-Fix wurde diese Tabellenlücke praktisch bestätigt –
+> Feat-ID 1089 (aus `test1.bic`) fehlt in `bicFeat()`s Tabelle und fällt auf
+> `else: "Unkown"` zurück (Tippfehler im Original, bewusst nicht mit-
+> korrigiert). Ein konkreter, realer Beleg dafür, dass P2.1 kein
+> theoretisches Aufräumen ist, sondern schon an einer einzigen Testdatei
+> sichtbar wird.
 
 Das ist exakt der Fall, für den `ponytail` steht: Sprosse 5 der Leiter ("*already-installed dependency solves it*") schlägt hier zwei bis drei ganze Sprossen höher aus als das aktuell verbaute "vollständig neu geschriebene Sonderlösung"-Muster. Der größte Hebel für dieses Projekt ist daher nicht neuer Code, sondern **Löschen**: ~3400 Zeilen Tabellen raus, ~150 Zeilen datengetriebenes Lookup rein – und die Ausgabe wird nebenbei automatisch mehrsprachig und korrekt.
 
@@ -23,14 +42,14 @@ Das ist exakt der Fall, für den `ponytail` steht: Sprosse 5 der Leiter ("*alrea
 | CLASSES | funktioniert für die Endstufe |
 | ABILITIES | funktioniert |
 | STATISTICS | funktioniert überwiegend; `ArmorClass`/`NaturalAC`-Zugriff laut Kommentar im Code selbst als unsicher markiert ("works for 1.69 but not for EE?") |
-| SKILLS | **Bug:** `bicSkill(c)` bekommt den Schleifenindex `c`, nicht das `Skill`-Feld aus dem `SkillList`-Struct → Namen (teils) richtig, Werte fehlen komplett |
-| FEATS | **Bug:** `bicFeat(c)` bekommt ebenfalls den Schleifenindex statt der `Feat`-ID aus dem `FeatList`-Struct → falsche Feats werden angezeigt |
-| BUILD DETAILS | nicht implementiert (`"working on this section"`) |
-| Ausgabepfad | landet im aktuellen Arbeitsverzeichnis, nicht neben der `.bic` |
-| Fehlerbehandlung | nur "keine Argumente" wird geprüft; kein Datei-, GFF- oder Feldfehler abgefangen |
+| SKILLS | ✅ **P0.1 gefixt.** War kein ID-Bug (Position im Array *ist* die Skill-ID, deckt sich mit `bicSkill()`), sondern: `Rank` wurde nie gelesen und nie auf `> 0` gefiltert. Jetzt: nur investierte Skills, mit Wert. |
+| FEATS | ✅ **P0.2 gefixt.** War ein echter ID-Bug: `FeatList`-Einträge tragen ihre eigene ID im `Feat`-Feld (word/uint16), der Code nutzte den Schleifenindex. Gefährlicher als der SKILLS-Bug, weil er nicht sichtbar mit "Unknown" scheiterte, sondern plausible, aber falsche Feat-Namen druckte. |
+| BUILD DETAILS | nicht implementiert (`"working on this section"`) – weiterhin offen, das ist P1.1 |
+| Ausgabepfad | ✅ **P0.3 gefixt.** `dir` wird jetzt tatsächlich benutzt (`dir / (name & ".txt")`); beide CI-Smoke-Tests mussten mitgezogen werden, da sie explizit auf dem alten (fehlerhaften) Verhalten aufbauten. |
+| Fehlerbehandlung | ✅ **P0.4 gefixt.** `try/except CatchableError` um Datei-Öffnen + GFF-Parsing (deckt "Datei nicht gefunden" und "kein gültiges GFF" ab), `else`-Zweig für den bisher stillen `output`-ist-`nil`-Fall. Bewusst **nicht** abgedeckt: eine Datei mit plausiblem Header, aber absurdem `structCount` kann den Prozess per OOM-Kill beenden – das ist kein Nim-Exception-Pfad und keine "S/M"-Aufgabe mehr, sondern Bounds-Checking in der Library selbst. Dokumentiert, nicht gefixt. |
 | Sprache | Codeausgabe komplett Englisch, Referenzdateien (`*1.txt`, aus "NWN Tool") komplett Deutsch – keine Umschaltung vorgesehen |
 | Tests | keine; `examples/bic/*.bic` + zugehörige `.txt`/`.json` liegen aber bereits als perfekte Golden-Files bereit |
-| CI (`build.yml`) | ✅ funktioniert jetzt (Matrix, `nimpretty`-Check, Build, zwei Smoke-Tests) |
+| CI (`build.yml`) | ✅ funktioniert (Matrix, `nimpretty`-Check, Build, **drei** Smoke-Tests: Basis-Charakter, Charakter mit SKILLS/FEATS-Werten, Fehlerpfad seit P0.4) |
 | CI (`release.yml`) | weiterhin veraltet (`ubuntu-18.04`, `actions/*@v1`/`@v2`, kein Test vor dem Release) – nicht Teil dieses Plans, aber vorgemerkt |
 
 Die vollständige, ältere Tiefenanalyse dazu liegt bereits in `docs/nwn_bic-analyse.md` und bleibt inhaltlich gültig; dieser Plan verdichtet sie zu Prioritäten und ergänzt die ponytail-Perspektive.
@@ -88,14 +107,16 @@ Grundsatz für die Umsetzung: keine ungefragten Abstraktionen (kein Plugin-Syste
 
 ## 5. Priorisierte Liste
 
-### P0 – Korrektheit der bestehenden Ausgabe (Blocker)
+### P0 – Korrektheit der bestehenden Ausgabe (Blocker) — ✅ vollständig erledigt
 
-| # | Aufgabe | Warum zuerst | Aufwand |
-|---|---|---|---|
-| 0.1 | **SkillList-Bug fixen:** `Skill`-ID + Rang aus jedem `SkillList`-Struct lesen statt Schleifenindex `c` | aktuell falsche/leere Werte, Kernversprechen des Tools gebrochen | S |
-| 0.2 | **FeatList-Bug fixen:** `Feat`-ID aus jedem `FeatList`-Struct lesen statt Schleifenindex `c` | zeigt aktuell komplett falsche Feats an | S |
-| 0.3 | **Ausgabepfad korrigieren:** `foo.bic` → `foo.txt` im selben Verzeichnis wie die Eingabe (`dir`-Variable wird schon berechnet, aber nicht benutzt) | Minimal-Fix, kein neuer Code nötig (Sprosse 7) | S |
-| 0.4 | **Fehlerbehandlung für Datei-/GFF-Fehler:** Datei nicht gefunden, kein gültiges GFF, `output`/`root` ist `nil` → verständliche Meldung + Exit-Code statt Absturz | verhindert unlesbare Nim-Stacktraces bei Anwendern | S/M |
+| # | Aufgabe | Warum zuerst | Aufwand | Status |
+|---|---|---|---|---|
+| 0.1 | **SkillList-Bug fixen:** `Skill`-ID + Rang aus jedem `SkillList`-Struct lesen statt Schleifenindex `c` | aktuell falsche/leere Werte, Kernversprechen des Tools gebrochen | S | ✅ **Erledigt.** Annahme korrigiert: kein ID-Feld vorhanden, Position *ist* die ID. Echter Bug war das fehlende `Rank`-Lesen + fehlende `> 0`-Filterung. Gegen `test1.bic.json`-Referenzwerte verifiziert (Discipline/Listen/Parry/Spot/Taunt = 4/4/4/2/4), deckt sich 1:1 mit `test1.txt`. |
+| 0.2 | **FeatList-Bug fixen:** `Feat`-ID aus jedem `FeatList`-Struct lesen statt Schleifenindex `c` | zeigt aktuell komplett falsche Feats an | S | ✅ **Erledigt.** Hier stimmte die Plan-Annahme: echter ID-Bug. Falle dabei: `Feat` ist `GffWord` (uint16), konvertiert anders als `GffInt` **nicht** implizit zu `int` – `.int` nötig, sonst Compile-Error. Real gegen die gepinnte Library (Tag `2.2.0`) kompiliert und mit einer aus `test1.bic.json` gebauten echten GFF-Struktur gegengeprüft: 10 von 11 Feats decken sich mit `test1.txt`; die eine Abweichung (ID 1089) ist die oben erwähnte Tabellenlücke in `bicFeat()`, kein Teil dieses Fixes. |
+| 0.3 | **Ausgabepfad korrigieren:** `foo.bic` → `foo.txt` im selben Verzeichnis wie die Eingabe (`dir`-Variable wird schon berechnet, aber nicht benutzt) | Minimal-Fix, kein neuer Code nötig (Sprosse 7) | S | ✅ **Erledigt.** `dir / (name & ".txt")`. Mit einer aus JSON gebauten *echten* Binär-`.bic` end-to-end über den tatsächlichen CLI-Lesepfad getestet (nicht nur den JSON-Umweg). Beide bestehenden CI-Smoke-Tests bauten explizit auf dem alten Verhalten auf (einer sogar mit einem Kommentar, der das wörtlich sagt) und mussten mitgezogen werden – kein optionaler Zusatz, sondern Teil desselben Commits. Nebenfund: `nimpretty` ist bei ≥2 aufeinanderfolgenden Kommentarzeilen nicht idempotent; alle Fix-Kommentare halten sich deshalb an "eine Zeile pro Kommentar", wie es die Datei schon vorher tat. |
+| 0.4 | **Fehlerbehandlung für Datei-/GFF-Fehler:** Datei nicht gefunden, kein gültiges GFF, `output`/`root` ist `nil` → verständliche Meldung + Exit-Code statt Absturz | verhindert unlesbare Nim-Stacktraces bei Anwendern | S/M | ✅ **Erledigt.** Empirisch ermittelt statt geraten: die Library wirft für alle realistischen "falsche Datei"-Fälle `IOError`/`ValueError` (`CatchableError`), kein `doAssert`/`Defect` – ein `try/except CatchableError` reicht. Fünf reale Fälle gegen die kompilierte Binary durchgespielt (fehlende Datei, leere Datei, Zufallsmüll, gültige Datei, nicht beschreibbares Zielverzeichnis via `chattr +i`). **Bewusst offen gelassen:** ein Header mit plausiblem Magic, aber absurdem `structCount` bringt den Prozess per OOM-Kill zu Fall – kein Nim-Exception-Pfad, `try/except` kann das strukturell nicht lösen. Wäre Bounds-Checking in `neverwinter/gff.nim` selbst, klar außerhalb der "S/M"-Größe. |
+
+Vollständige Herleitung, verworfene Zwischenstände und alle Testkommandos: `docs/nwn_bic-cli-plan-status.md`.
 
 ### P1 – Kernfunktion vervollständigen
 
@@ -137,9 +158,11 @@ Grundsatz für die Umsetzung: keine ungefragten Abstraktionen (kein Plugin-Syste
 ## 6. Empfohlene Reihenfolge
 
 ```
-P0 (0.1–0.4)  →  P1 (1.1–1.4)  →  P2 (2.1–2.6)  →  P3 (3.1–3.3)  →  P4
+P0 (0.1–0.4) ✅  →  P1 (1.1–1.4)  →  P2 (2.1–2.6)  →  P3 (3.1–3.3)  →  P4
+   erledigt          nächster
+                      Schritt
 ```
 
-P0 zuerst, weil alles Weitere (insbesondere die Regressionstests in P3) auf korrekten Werten aufbaut. P2 bewusst nach P1: Erst mit funktionierendem `BUILD DETAILS` wird sichtbar, wie viele Feat-/Spell-Namen tatsächlich gebraucht werden – danach lohnt sich der Umbau auf 2DA/TLK erst recht, weil er sonst an halbfertigem Code vorbeigeplant würde.
+P0 zuerst, weil alles Weitere (insbesondere die Regressionstests in P3) auf korrekten Werten aufbaut – das war die Prämisse und ist jetzt erfüllt: `test1.bic` liefert reale, verifizierte Werte für SKILLS und FEATS, landet am richtigen Pfad, und Datei-/GFF-Fehler brechen nicht mehr mit Stacktrace ab. P2 bewusst nach P1: Erst mit funktionierendem `BUILD DETAILS` wird sichtbar, wie viele Feat-/Spell-Namen tatsächlich gebraucht werden – danach lohnt sich der Umbau auf 2DA/TLK erst recht, weil er sonst an halbfertigem Code vorbeigeplant würde. Der bereits real beobachtete Tabellenlücken-Fund bei P0.2 (Feat-ID 1089 → "Unkown") ist ein zusätzliches, konkretes Argument für P2.1 – nicht mehr nur theoretisch.
 
 **Kurzfassung des größten Einzeleffekts:** Punkt 2.1–2.4 bedeutet netto **Code löschen** (rund 3200 von 3671 Zeilen in `helper.nim` fallen weg) bei gleichzeitig **mehr** Funktionsumfang (automatische DE/EN-Übersetzung statt einer hart kodierten Sprache). Das ist der Kern dessen, was `ponytail` mit "*already-installed dependency solves it*" meint – hier lässt sich das wörtlich am eigenen Repo nachweisen, weil die Rohdaten (`examples/2da`, `examples/tlk`) bereits vorliegen.
