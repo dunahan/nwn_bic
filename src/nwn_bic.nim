@@ -27,7 +27,7 @@ Usage:
 let root = openFileStream(args).readGffRoot(false)
 var (dir, name, ext) = splitFile(args)
 # ponytail: dir was unused before -- output landed in cwd instead of beside the input .bic
-var output = newFileStream(name & ".txt", fmWrite)
+var output = newFileStream(dir / (name & ".txt"), fmWrite)
 
 # if the file is created, then begin with writing down
 if not isNil(output):
