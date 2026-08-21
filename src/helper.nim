@@ -2,14 +2,12 @@ import tables
 
 # write line only if it has something with value?
 
-
 #[ cut down LocStrings
 proc bicCutLocString*(s: string): string =
   var start = 0
   delete(s, start..find(s, '"'))
   delete(s, find(s, '"')..find(s, '}'))
   result s ]#
-
 
 #get race by int
 proc bicRace*(num: byte): string =
@@ -87,7 +85,6 @@ proc bicGender*(num: byte): string =
     else:
       "Unknown"
 
-
 # get classname by int
 proc bicClass*(num: int): string =
   result = case num:
@@ -140,6 +137,18 @@ proc bicClass*(num: int): string =
     else:
       "Unknown"
 
+proc bicSchool*(num: byte): string =
+  result = case num:
+    of 0: "General"
+    of 1: "Abjuration"
+    of 2: "Conjuration"
+    of 3: "Divination"
+    of 4: "Enchantment"
+    of 5: "Evocation"
+    of 6: "Illusion"
+    of 7: "Necromancy"
+    of 8: "Transmutation"
+    else: "Unknown"
 
 # get Alignment Lawful/Chaotic
 proc bicAlignmLC*(num: byte): string =
@@ -152,7 +161,6 @@ proc bicAlignmLC*(num: byte): string =
       "Chaotic"
     else:
       ""
-
 
 # get Alignment Good/Evil
 proc bicAlignmGE*(num: byte): string =
