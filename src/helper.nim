@@ -67,6 +67,15 @@ proc bicRace*(num: byte): string =
     else:
       "Unknown"
 
+# order: Str, Dex, Con, Int, Wis, Cha -- gleiche Reihenfolge wie ABILITIES
+proc bicRaceAbilityMods*(num: byte): array[6, int] =
+  result = case num:
+    of 0: [0, 0, 2, 0, 0, -2]
+    of 1: [0, 2, -2, 0, 0, 0]
+    of 2: [-2, 0, 2, 0, 0, 0]
+    of 3: [-2, 2, 0, 0, 0, 0]
+    of 5: [2, 0, 0, -2, 0, -2]
+    else: [0, 0, 0, 0, 0, 0]
 
 #get gender by int
 proc bicGender*(num: byte): string =
