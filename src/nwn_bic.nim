@@ -75,7 +75,12 @@ if not isNil(output):
     c = i - 1
     output.writeLine(" - " & bicClass(clist[c]["Class", GffInt]) & " (" &
       $clist[c]["ClassLevel", c.GffShort] & ")")
-#   "School: " & $clist[c]["School", byte])                         # if that exist, print it too?!
+  for i in countup(1, nbrc):
+    c = i - 1
+    let school = clist[c]["School", 255.GffByte]      # verifizieren!
+    let schoolSuffix = if school.byte != 255: ", School: " & bicSchool(school.byte) else: ""
+    output.writeLine(" - " & bicClass(clist[c]["Class", GffInt]) & " (" &
+      $clist[c]["ClassLevel", c.GffShort] & ")" & schoolSuffix)
 
   # print those final abilities
   output.writeLine("\nABILITIES:" & "\n" &
@@ -130,7 +135,20 @@ if not isNil(output):
 
   # those section should later show the build process per taken level
   output.writeLine("\n\n\n" & LINE, "\n     BUILD DETAILS\n", LINE)
-  output.writeLine("working on this section")
+
+  let mods = bicRaceAbilityMods(root["Race", byte])
+  let finals = [root["Str", byte].int, root["Dex", byte].int, root["Con", byte].int,
+                root["Int", byte].int, root["Wis", byte].int, root["Cha", byte].int]
+  const abilNames = ["Str", "Dex", "Con", "Int", "Wis", "Cha"]
+  output.writeLine("\nSTARTING ABILITIES:")
+  for idx in 0..5:
+    let base = 8 + mods[idx]
+    let delta = finals[idx] - base
+    let sign = if delta < 0: "-" else: "+"
+    output.writeLine("  " & abilNames[idx] & ": " & $finals[idx] & " (base " &
+      intToStr(base, 2) & sign & intToStr(abs(delta), 2) & ")")
+
+output.writeLine("working on this section")  # P1.1 (Level-für-Level)
 
   # finally were ready to close the file, due all is printed...
   output.close()
