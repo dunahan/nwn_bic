@@ -75,6 +75,27 @@ proc bicRaceAbilityMods*(num: byte): array[6, int] =
     of 5: [2, 0, 0, -2, 0, -2]
     else: [0, 0, 0, 0, 0, 0]
 
+# ponytail: only pairs verified against examples/bic/; unverified = no label, not "definitely free". Upgrade: read real cls_feat_<class>.2da/racial data (P2.7).
+proc bicIsClassFeat*(classId, featId: int): bool =
+  case classId
+  of 0: # Barbarian
+    featId in [3, 4, 32, 45, 46, 194, 195, 293, 1089]
+  of 10: # Wizard
+    featId in [51, 303, 945]
+  of 34: # Pale Master
+    featId in [228, 886, 889, 890, 891]
+  else:
+    false
+
+proc bicIsRaceFeat*(raceId, featId: int): bool =
+  case raceId
+  of 1: # Elf
+    featId in [235, 236, 237, 238, 239, 240, 256, 354]
+  of 6: # Human
+    featId == 258
+  else:
+    false
+
 #get gender by int
 proc bicGender*(num: byte): string =
   result = case num:

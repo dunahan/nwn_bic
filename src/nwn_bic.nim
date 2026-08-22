@@ -73,12 +73,9 @@ if not isNil(output):
   var i, c: int
   for i in countup(1, nbrc): # using a for loop fot the classes
     c = i - 1
-    output.writeLine(" - " & bicClass(clist[c]["Class", GffInt]) & " (" &
-      $clist[c]["ClassLevel", c.GffShort] & ")")
-  for i in countup(1, nbrc):
-    c = i - 1
-    let school = clist[c]["School", 255.GffByte]      # verifizieren!
-    let schoolSuffix = if school.byte != 255: ", School: " & bicSchool(school.byte) else: ""
+    let school = clist[c]["School", 255.GffByte]
+    let schoolSuffix = if school.byte != 255: ", School: " & bicSchool(
+        school.byte) else: ""
     output.writeLine(" - " & bicClass(clist[c]["Class", GffInt]) & " (" &
       $clist[c]["ClassLevel", c.GffShort] & ")" & schoolSuffix)
 
@@ -126,12 +123,21 @@ if not isNil(output):
   # ponytail: GffWord (uint16) doesn't implicitly convert to int like GffInt does, hence the .int below
   var flist = root["FeatList", GffList]
   var nbrf = count($flist, "GffStruct")
+  let charRace = root["Race", byte].int
   i = 0
   c = 0
   for i in countup(1, nbrf):
     c = i - 1
-    let featId = flist[c]["Feat", GffWord]
-    output.writeLine(" - " & bicFeat(featId.int))
+    let featId = flist[c]["Feat", GffWord].int
+    var origin = ""
+    if bicIsRaceFeat(charRace, featId):
+      origin = "(RACE) "
+    else:
+      for cc in 0..<nbrc:
+        if bicIsClassFeat(clist[cc]["Class", GffInt], featId):
+          origin = "(CLASS) "
+          break
+    output.writeLine(" - " & origin & bicFeat(featId))
 
   # those section should later show the build process per taken level
   output.writeLine("\n\n\n" & LINE, "\n     BUILD DETAILS\n", LINE)
@@ -148,7 +154,7 @@ if not isNil(output):
     output.writeLine("  " & abilNames[idx] & ": " & $finals[idx] & " (base " &
       intToStr(base, 2) & sign & intToStr(abs(delta), 2) & ")")
 
-output.writeLine("working on this section")  # P1.1 (Level-für-Level)
+  output.writeLine("working on this section") # P1.1 (Level-fuer-Level) weiterhin offen
 
   # finally were ready to close the file, due all is printed...
   output.close()

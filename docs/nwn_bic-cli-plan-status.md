@@ -473,3 +473,366 @@ aufgerufen wird.
   gegen den geklonten Library-Quelltext per `--path`. Funktional äquivalent
   für die hier geprüften Fragen, aber kein Ersatz für einen echten
   `nimble`-Lauf vor dem Merge.
+
+## P1.4 (School bei Zauberklassen) — erledigt in diesem Durchgang
+
+Die Zeile war bereits als Kommentar vorbereitet (`# "School: " & $clist[c]["School", byte])`),
+aber ein direkter, nicht-optionaler Zugriff (`clist[c]["School", byte]`) hätte für
+jede nicht-zaubernde Klasse (kein `School`-Feld im Struct) eine `GffError`-Exception
+geworfen und das ganze Programm abgebrochen — nicht nur eine Fehlermeldung produziert.
+
+### Verifikation
+
+Wie bei P0.2/P0.3: nicht angenommen, sondern real gegen die gepinnte Library
+(Tag `2.2.0`) kompiliert. Offene Frage vorab geklärt: funktioniert der
+Default-Overload `self[label, default: T]` (`getOrDefault`, liest `T` oder
+gibt `default` zurück, wenn das Feld fehlt oder der Typ nicht passt) für ein
+optionales `byte`-Feld überhaupt so wie erwartet? Isoliert getestet, `nim
+check` + echter Lauf, 0 Fehler, 0 Warnungen:
+
+```nim
+let school = clist[c]["School", 255.GffByte]
+let schoolSuffix =
+  if school != 255: ", School: " & bicSchool(school) else: ""
+```
+
+`255` liegt außerhalb des gültigen `0..8`-Bereichs von `spellschool.2da` und
+dient als Sentinel für "Feld fehlt".
+
+Zwei echte, aus GFF-JSON gebaute Testfälle (`gffRootFromJson` + `write()`,
+gleiches Vorgehen wie bei P0.3 — echte Binärdatei, echter CLI-Lesepfad):
+
+| Fall | ClassList | Erwartung | Ergebnis |
+|---|---|---|---|
+| Barbar (`test1`-Werte, kein `School`-Feld) | `Class: 0` | `" - Barbarian (1)"`, kein Suffix | ✅ exakt |
+| Magier (`Class: 10`, `School: 0`, aus `aluviandarks169.bic.json`s ClassList-Struktur) | `Class: 10, School: 0` | `" - Wizard (1), School: General"` | ✅ exakt |
+
+Der Barbar-Fall ist der vollständige, bereits bestehende `test1`-Regressionstest —
+**die komplette restliche Ausgabe (IDENTITY/ABILITIES/STATISTICS/SKILLS/FEATS)
+bleibt byte-identisch zu `test1.txt`**, keine Nebenwirkung durch den Patch.
+
+`helper.nim` bekommt eine neue kleine Tabelle `bicSchool()` (9 Einträge,
+`spellschool.2da`-Standardwerte 0–8) im gleichen Stil wie `bicRace`/`bicGender`.
+
+### Nebenfund: keine CI-Fixture für den Magier-Fall
+
+`examples/bic/` enthält aktuell keine `.bic`-Datei mit gesetztem `School`-Feld
+(`test.bic`/`test1.bic` sind beide Barbaren). Der Magier-Zweig ist deshalb
+**nur lokal verifiziert** (s.o.), nicht Teil der CI. Die CI bekommt stattdessen
+eine Regressionssicherung in die Gegenrichtung: der bestehende `test1`-Smoke-Test
+prüft jetzt explizit, dass `School:` **nicht** in der Barbar-Ausgabe auftaucht
+(`if grep -Fq 'School:' "$generated"; then exit 1; fi` — bewusst **nicht**
+`grep -Fqv`, das prüft pro Zeile und hätte den Check lautlos wirkungslos gemacht;
+empirisch an einem manipulierten Testfile nachgestellt, bevor der echte Diff
+geschrieben wurde). Ob ein zusätzliches Magier-`.bic`-Binärfixture unter
+`examples/bic/` angelegt werden soll (echte Binärdatei als Git-Blob), ist eine
+offene, bewusst nicht in diesem Commit getroffene Entscheidung.
+
+## P1.2 (STARTING ABILITIES) — erledigt in diesem Durchgang
+
+### Erst die Formel gegen echte Daten geprüft, dann erst geschrieben
+
+Die einzige golden-verifizierbare Datenquelle (`test1.bic.json` ↔ `test1.txt`,
+Mensch, kein Rassenmodifikator) kann eine Formel der Form
+`base = 8 + Rassenmodifikator` nicht von `base = 8` (ohne jeden Modifikator)
+unterscheiden — bei Mensch sind beide identisch. Ein zunächst angenommener
+Standard-D&D-3.x-Rassenmodifikator-Tabelle (Zwerg +2 Kon/-2 Cha, Elf +2 Ges/-2
+Kon, usw.) wäre also mit `test1` allein unverifiziert geblieben.
+
+Zur Gegenprobe: `aluviandarks1691.txt` zeigt einen Elfen mit
+STARTING-ABILITIES-Werten. Wichtig: **`aluviandarks1691.txt` hat kein
+zugehöriges `.bic`/`.json`** — die im Repo vorhandene `aluviandarks169.bic.json`
+ist ein *anderer* Spielstand desselben Charakters (`Con: 14` dort vs. `Con: 12`
+in der Textdatei — unterschiedliche Werte, also unterschiedliche Snapshots,
+real anhand der Zahlen geprüft, nicht angenommen). `aluviandarks1691.txt` taugt
+deshalb **nicht** als goldener CI-Test, wohl aber als Kontrollrechnung für die
+Rassenmodifikator-Annahme, da es der einzige verfügbare Nicht-Mensch-Datenpunkt
+mit echten (wenn auch nicht gegengeprüften) Werten ist.
+
+Angewendet (real kompiliert, mit `aluviandarks1691.txt`s eigenen FINAL-BUILD-
+Werten als Eingabe, Race=Elf, Standard-Tabelle Elf: Ges+2/Kon-2):
+
+| Attribut | final | Formel-Ausgabe | Referenztext | Treffer? |
+|---|--:|---|---|---|
+| Str | 10 | `08+02` | `08+02` | ✅ |
+| Dex | 16 | `10+06` | `10+06` | ✅ |
+| Con | 12 | `06+06` | `06+06` | ✅ |
+| Int | 16 | `08+08` | `11+05` | ❌ |
+| Wis | 12 | `08+04` | `08+04` | ✅ |
+| Cha | 10 | `08+02` | `08+02` | ✅ |
+
+5 von 6 exakt, **beide** von Null verschiedenen Rassenmodifikatoren (Dex+2,
+Con-2) treffen exakt — das ist der diskriminierende Teil des Tests und bestand.
+Nur Int weicht ab (Referenz zeigt einen um 3 höheren „base"-Wert). Da bei
+Level 1 noch keine Level-up-Attributspunkte möglich sind (die gibt es erst ab
+Stufe 4), ist die plausibelste Erklärung ein **inhärenter Bonus** (z. B. ein
+verzehrtes Attributsbuch/„Manual of Gainful Exercise", oder ein Item-Bonus, den
+das NWN Tool in seine „base"-Berechnung einrechnet) — eine Größe, die in keinem
+der aktuell gelesenen GFF-Felder steckt und mit `base + Rassenmodifikator =
+final` grundsätzlich nicht rekonstruierbar ist. Nicht als Bug behandelt,
+sondern als dokumentierte, unvermeidbare Grenze des Modells.
+
+### Fix
+
+`helper.nim`: neue Tabelle `bicRaceAbilityMods()`, Reihenfolge Str/Dex/Con/Int/
+Wis/Cha, Standard-D&D-3.x/NWN-Werte für Zwerg/Elf/Gnom/Halbling/Halbork (die
+übrigen Rassen, inkl. Mensch und Halbelf, haben keinen Modifikator und fallen
+auf `else: [0,0,0,0,0,0]`). `nwn_bic.nim`: Schleife über die sechs Attribute,
+`base = 8 + Modifikator`, `spent = final - base`, Ausgabeformat exakt wie im
+Referenztool (`intToStr(x, 2)`, Stdlib, keine neue Abhängigkeit).
+
+`ponytail:`-Kommentar markiert die bekannte Lücke (inhärente Boni nicht
+modelliert) direkt am Code, mit Verweis auf die Voraussetzung für eine
+Erweiterung (ein tatsächlich existierendes GFF-Feld dafür, aktuell nicht
+bekannt).
+
+### Verifikation
+
+Kompletter End-to-End-Lauf (echte Binärdatei aus `test1.bic.json`-Werten,
+gebaut mit der Library-eigenen `write()`-Funktion, gelesen über den echten
+CLI-Pfad `openFileStream(args).readGffRoot(false)`, aufgerufen von einem
+fremden Arbeitsverzeichnis aus): **komplette Ausgabe byte-identisch zu
+`test1.txt`**, einschließlich des neuen STARTING-ABILITIES-Blocks
+(`Str: 16 (base 08+08)` … `Cha: 10 (base 08+02)`). Kein Diff, keine
+Abweichung in den vorher schon funktionierenden Abschnitten.
+
+`nimpretty --backup:off` dreimal in Folge über die gepatchte Datei laufen
+lassen — 0 Änderungen bei jedem Lauf. Zwei ursprünglich zweizeilige
+`ponytail:`-Begründungskommentare wurden vorsorglich auf je eine Zeile
+gekürzt (Ein-Zeile-pro-Kommentar-Konvention aus P0.3), obwohl `nimpretty`
+sie in diesem konkreten Fall (Kommentar vor dem ersten Statement eines
+Blocks, nicht zwischen zwei Statements) stabil verarbeitet hätte — die
+strengere, dokumentierte Konvention wird trotzdem eingehalten, statt sich
+auf einen ungetesteten Sonderfall zu verlassen.
+
+### CI-Ergänzung
+
+Siehe P1.4-Abschnitt oben — beide Punkte teilen sich denselben CI-Diff im
+bestehenden „larger-character smoke test", da beide Änderungen denselben
+Testlauf (`test1.bic`) betreffen. Zwei neue `grep`-Zeilen:
+`grep -Fq 'STARTING ABILITIES'` und `grep -Fq 'Str: 16 (base 08+08)'`.
+
+## Ehrlicher Hinweis (P1.2/P1.4)
+
+**Nicht abgedeckt:** Rassen jenseits Zwerg/Elf/Gnom/Halbling/Halbork/Mensch/
+Halbelf (Monster-Rassen-IDs ≥7 aus `bicRace()`) fallen im Modifikator auf
+`[0,0,0,0,0,0]` — unwahrscheinlich für Spielercharaktere (`IsPC`), aber nicht
+explizit ausgeschlossen. Der Int-Ausreißer bei `aluviandarks1691.txt` bleibt
+ungeklärt (dokumentiert, nicht gefixt, s.o.) — sollte ein GFF-Feld für
+inhärente Attributsboni später identifiziert werden, ist das ein eigener,
+kleiner Fix, kein Teil dieses Durchgangs. Kein Magier-`.bic`-Fixture in CI
+(s.o.), School-Zweig nur lokal verifiziert. Alle Verifikationen liefen unter
+Linux (dieser Container) mit `nim` 1.6.14 — nicht auf einem echten
+Windows/macOS-Runner gegengeprüft, dafür existiert die CI-Matrix.
+
+## Blocker-Fix vor P1.3: Compile-Fehler im Branch `p1-complete-core-function`
+
+Der Branch-Stand (Commit `4ff74a7`) kompiliert nicht: `nim c` bricht mit
+`Error: invalid indentation` bei Zeile 154 (`output.close()`) ab. Real gegen
+die gepinnte Library getestet, nicht angenommen. Zwei echte Bugs beim
+Übernehmen der P1.2/P1.4-Planungsskizze:
+
+1. **Doppelte CLASSES-Schleife.** Die alte Schleife (ohne `School`) und die
+   neue (mit `School`) liefen hintereinander über dieselbe `ClassList` — jede
+   Klasse wäre in der CLASSES-Sektion zweimal ausgegeben worden.
+2. **Fehlende Einrückung.** `output.writeLine("working on this section")`
+   stand auf Spalte 1 statt in der Einrückung des `if not isNil(output):`-
+   Blocks — strukturell außerhalb des Blocks, was `else:` (Zeile 155) ohne
+   passendes offenes `if` zurückließ. Kein Logikfehler, ein Parse-Fehler.
+
+### Fix
+
+Root-Cause statt Symptom: beide Schleifen zu einer zusammengeführt (School-
+Suffix-Logik bleibt inhaltlich wie geplant), Einrückung der Platzhalterzeile
+korrigiert. `nimpretty --backup:off` dreimal in Folge stabil (0 Änderungen ab
+Lauf 2; Lauf 1 reformatiert die `schoolSuffix`-Zeile automatisch, das ist die
+tatsächliche nimpretty-Normalform, jetzt übernommen). `nim check` danach 0
+Fehler, nur die vorbestehende `tables`-Unused-Import-Warnung.
+
+### Wichtige Selbstkorrektur
+
+In der letzten Session hatte ich behauptet, die P1.2-Ausgabe sei „byte-
+identisch zu `test1.txt`". Das war unvollständig: mein damaliger Vergleich
+endete bewusst bei `STARTING ABILITIES`, weil ich P1.1 als offen behandelt
+hatte — aber die reale `test1.txt` im Repo zeigt danach bereits die volle
+Level-1-Sektion inkl. `(CLASS)`/`(RACE)`-Feat-Herkunft (P1.3) und
+Übersetzung (P2). Ich hatte das nicht klar genug als Teilvergleich markiert.
+
+### Nebenfund: Golden-Files zeigen jetzt das Zielformat, nicht den Ist-Zustand
+
+Alle `.txt`-Referenzdateien unter `examples/bic/` (`test`, `test1`, `test2`,
+`test3`, `palemas169`) zeigen inzwischen das vollständige deutsche NWN-Tool-
+Zielformat (Level-Details, Feat-Herkunft, Übersetzung) statt des bisherigen
+Programm-Ist-Zustands. Ein exakter Datei-Diff gegen diese Dateien ist daher
+erst nach P1.1 **und** P1.3 **und** P2 gemeinsam sinnvoll. Die bestehenden
+`grep`-Teilstring-Checks in `build.yml` bleiben davon unberührt, da sie den
+generierten Output direkt prüfen, nicht per Datei-Diff gegen die eingecheckte
+Referenz vergleichen.
+
+**Vorsicht beim lokalen Testen:** Das Programm schreibt die Ausgabe neben die
+Eingabedatei (P0.3-Design) — ein lokaler Testlauf gegen `examples/bic/test1.bic`
+im echten Checkout **überschreibt** `examples/bic/test1.txt`. Im CI-Runner
+unproblematisch (Checkout wird verworfen), lokal aber immer in einem
+Kopierverzeichnis arbeiten und danach `git checkout -- examples/` nicht
+vergessen (mir selbst passiert, per `git status`/`git checkout` bemerkt und
+zurückgesetzt, kein Schaden am Repo).
+
+## P1.3 (Feat-Herkunft CLASS/RACE/frei) — erledigt in diesem Durchgang, bewusst eingeschränkt (Option B)
+
+### Datenlage geprüft, bevor irgendetwas geschrieben wurde
+
+`LvlStatList[x].FeatList[]` UND das Top-Level `FeatList[]` tragen pro Eintrag
+nur die `Feat`-ID (word/uint16) — kein Herkunfts-Flag, real per JSON-Dump
+(`toJson(root)` aus `neverwinter/gffjson`) an `test1.bic` geprüft. Auch
+`examples/2da/feat.2da` (im Repo vorhanden) hat keine Spalte, die zeigt,
+welche Klasse/Rasse ein Feat automatisch vergibt — nur allgemeine
+Feat-Metadaten (Voraussetzungen, Kategorie, `ALLCLASSESCANUSE`). Diese Info
+steckt in NWN normalerweise in separaten `cls_feat_<klasse>.2da`-Tabellen
+(eine pro Klasse) plus einer Rassen-Feat-Quelle, die **nicht** im Repo
+liegen (vollständige Suche: nur `feat.2da`/`skills.2da`/`spells.2da` unter
+`examples/2da/`, keine `cls_feat_*`/`racial*`-Dateien irgendwo im Repo).
+
+Eine allgemeingültige, für jede Klasse/Rasse korrekte Herleitung ist damit
+aktuell nicht möglich, ohne zu raten — und Raten hätte hier denselben
+gefährlichen Bug-Typ wie P0.2 reproduziert: plausibel aussehende, aber bei
+den meisten Klassen/Rassen falsche Labels, die nicht durch „Unknown"
+auffallen.
+
+### Gewählter Weg: Option B — bewusst eingeschränkte, verifizierte Tabelle
+
+Statt zu raten: eine kleine Lookup-Tabelle, **nur** für die (Klasse-oder-
+Rasse, Feat)-Paare, die tatsächlich in den vorhandenen Golden-Referenzen
+belegt sind. Alles andere bekommt **kein** Label (unbekannt ≠ „garantiert
+frei gewählt", sondern „nicht verifiziert").
+
+Herangezogene Quellen (jede einzeln gegengeprüft, nicht nur gelesen):
+
+| Quelle | Charakter | Status | Beitrag |
+|---|---|---|---|
+| `test1.bic`/`test1.txt` | Mensch Barbar Lvl 1 | echtes Testpaar | 8× CLASS, 1× RACE (Barbar/Mensch) |
+| `test2.bic`/`test2.txt` | Mensch Barbar Lvl 2 | echtes Testpaar | +1× CLASS (Uncanny Dodge I) |
+| `test3.bic`/`test3.txt` | Mensch Barbar Lvl 3 | echtes Testpaar | bestätigt „Cleave" = frei |
+| `palemas169.bic`/`palemas1691.txt` | Mensch Magier/Bleicher Meister Lvl 15 | Ability-Werte real gegen `palemas169.bic.json` abgeglichen (Str/Dex/Con/Int/Wis/Cha exakt identisch) → echtes Paar, trotz Namens-Konvention ohne „1"-Suffix wie sonst üblich | 8× CLASS (3× Magier, 5× Bleicher Meister) |
+| `aluviandarks169.bic.json`/`aluviandarks1691.txt` | Elf Magierin Lvl 1 | **kein** exaktes Testpaar (Con-Wert weicht ab, siehe letzte Session) — aber Feat-Herkunft ist eine feste Spielregel (welche Klasse/Rasse ein Feat vergibt hängt nicht vom individuellen Charakter-Snapshot ab), deshalb trotzdem als Regel-Quelle verwendet, explizit als solche markiert | 2× CLASS (Wizard, deckungsgleich mit palemas169-Fund), 8× RACE (Elf) |
+
+`palemas169.txt` selbst (nicht `palemas1691.txt`) wurde **nicht** als Quelle
+verwendet — die Datei zeigt Anzeichen einer kaputten/veralteten Referenz
+(leere Skill-Werte nach dem Doppelpunkt, eine offensichtlich generische statt
+charakter-eigene Feat-Liste in FINAL BUILD). Nicht weiter untersucht, da
+`palemas1691.txt` für denselben Charakter eine saubere, in sich konsistente
+Alternative bietet.
+
+Ergebnis (`helper.nim`, `bicIsClassFeat`/`bicIsRaceFeat`):
+
+```nim
+proc bicIsClassFeat*(classId, featId: int): bool =
+  case classId
+  of 0: # Barbarian
+    featId in [3, 4, 32, 45, 46, 194, 195, 293, 1089]
+  of 10: # Wizard
+    featId in [51, 303, 945]
+  of 34: # Pale Master
+    featId in [228, 886, 889, 890, 891]
+  else:
+    false
+
+proc bicIsRaceFeat*(raceId, featId: int): bool =
+  case raceId
+  of 1: # Elf
+    featId in [235, 236, 237, 238, 239, 240, 256, 354]
+  of 6: # Human
+    featId == 258
+  else:
+    false
+```
+
+`nwn_bic.nim`: In der FEATS-Schleife wird für jedes Feat zuerst auf
+`bicIsRaceFeat(charRace, featId)` geprüft, sonst über **alle** Klassen des
+Charakters (Multiklassen-fähig, `for cc in 0..<nbrc`) auf
+`bicIsClassFeat(...)`. Präfix `(RACE) `/`(CLASS) `/leer entsprechend.
+
+Bewusst **nicht** in P1.1s Level-für-Level-Abschnitt eingebaut (der ist noch
+Platzhalter) — stattdessen additiv in die bereits bestehende FINAL-BUILD-
+„FEATS:"-Sektion, die einzige, die es aktuell überhaupt gibt. Kleinster Diff,
+sofortiger Nutzen; wenn P1.1 später die Level-Struktur nachzieht, wandert die
+gleiche Lookup-Logik einfach mit dorthin.
+
+### Verifikation — alle sechs verfügbaren `.bic`-Dateien, real kompiliert und gelaufen
+
+| Datei | Ergebnis |
+|---|---|
+| `test.bic` (Barbar Lvl 1) | 11 Feats, Labels exakt wie hergeleitet |
+| `test1.bic` (Barbar Lvl 1) | identisch zu `test.bic` (gleicher Build) |
+| `test2.bic` (Barbar Lvl 2) | +`(CLASS) Uncanny Dodge I`, Rest unverändert |
+| `test3.bic` (Barbar Lvl 3) | +`Cleave` ohne Label, Rest unverändert |
+| `palemas169.bic` (Magier/Bleicher Meister Lvl 15) | alle 18 Feats exakt wie aus `palemas1691.txt` hergeleitet — unabhängige Bestätigung des Multiklassen-Zweigs |
+| `aluviandarks169.bic.json` (Elf Magierin Lvl 1) | über nachgebauten JSON-Weg (echte Binärdatei stürzt an einem **vorbestehenden**, von P1.3 unabhängigen Bug ab, s.u.) — alle 11 Feats exakt wie aus `aluviandarks1691.txt` hergeleitet |
+
+`nimpretty --backup:off` dreimal stabil (0 Änderungen), `nim check` 0 neue
+Fehler/Warnungen.
+
+### Nebenfund: `aluviandarks169.bic` crasht (vorbestehend, nicht P1.3)
+
+`root["BaseAttackBonus", byte]` (nicht-optionaler Zugriff, STATISTICS-
+Sektion) wirft `KeyError`, weil `aluviandarks169.bic` dieses Feld nicht hat.
+Bereits in `docs/nwn_bic-analyse.md` als bekanntes, generelles Problem
+dokumentiert („Abhängigkeit von konkreten GFF-Feldern... ohne defensive
+Feldprüfung kann eine Datei deshalb mit einem Key-Fehler abbrechen").
+Betrifft mehrere Felder (`ArmorClass`, `WillSaveThrow`, `willbonus`, ...),
+nicht nur `BaseAttackBonus`, und ist ein eigenständiges, größeres Aufräumen
+(alle nicht-optionalen Feldzugriffe in der STATISTICS-Sektion defensiv
+machen) — bewusst **nicht** Teil dieses P1.3-Commits. Für die eigene
+Verifikation wurde stattdessen ein lokal gepatchtes JSON verwendet (fehlende
+Felder mit plausiblen Werten ergänzt), rein um den P1.3-Feat-Zweig zu prüfen,
+nicht um den Bug zu verstecken. Empfehlung: als eigenen kleinen Fix vor P1.1
+einplanen (P1.1 wird ohnehin mehr GFF-Felder anfassen, dort passt eine
+generelle „optionaler Zugriff mit sinnvollem Default"-Passage gut rein).
+
+## Vorgemerkt für später: echter 2DA/Spieldaten-Zugriff statt hartcodierter Tabelle
+
+Auf Wunsch hier festgehalten, kein Teil dieses Commits:
+
+Die aktuelle `bicIsClassFeat`/`bicIsRaceFeat`-Tabelle ist explizit eine
+Übergangslösung (Option B), gültig nur für die fünf Klassen/Rassen, die in
+den vorhandenen Testdateien vorkommen. Der korrekte, allgemeingültige Weg
+(Option A aus der letzten Runde) ist ein eigenes kleines Tool/Modul, das zur
+Laufzeit die **echten** Spieldaten liest, statt eine Tabelle im Quelltext zu
+pflegen:
+
+- **Datenquelle:** `cls_feat_<klasse>.2da` (eine Tabelle pro Klasse, listet
+  auf, welches Feat bei welchem Level automatisch vergeben wird) plus die
+  entsprechende Rassen-Feat-Quelle (vermutlich über `racialtypes.2da`
+  referenziert oder in festen `racialfeat*.2da`-Tabellen, muss noch geklärt
+  werden). Analog zu `neverwinter/twoda`, das für `feat.2da`/`skills.2da`/
+  `spells.2da` schon als Abhängigkeit vorhanden ist (siehe P2.1/P2.2 im
+  Hauptplan).
+- **Datenherkunft ist bewusst offen zu lassen, nicht von mir zu entscheiden:**
+  Diese 2DA-Dateien sind Bioware/Beamdog-Spieldaten. Ob/wie sie ins Repo
+  kommen (aus einer eigenen NWN-Installation extrahiert, wie es bei
+  `feat.2da` offenbar schon geschehen ist, oder zur Laufzeit von einem vom
+  Nutzer angegebenen NWN-Installationspfad gelesen, ähnlich der bereits
+  geplanten `--tlk <pfad>`-Option aus P2.4) ist eine bewusste
+  Lizenz-/Produktentscheidung, die ich nicht eigenmächtig treffen will —
+  daher hier nur als offener Punkt vorgemerkt, keine 2DA-Sammlungen von
+  irgendwoher automatisch eingebunden.
+- **Custom-Content-Flag:** Module/Spielstände können HAK-Paks mit
+  überschriebenen `cls_feat_*.2da`/`feat.2da`-Einträgen mitbringen — die
+  Standard-2DA-Werte stimmen dann nicht mehr mit dem, was der Charakter
+  tatsächlich bekommen hat. Ein Warn-Flag ist sinnvoll für den Fall, dass ein
+  Feat aus dem Charakter-GFF in der geladenen `cls_feat_*.2da`/Rassen-Quelle
+  gar nicht auftaucht (weder als CLASS- noch als RACE-Feat für diese
+  Klasse/Rasse) UND auch keine bekannte, generische Bonus-Feat-Auswahl ist —
+  das deutet auf Custom Content hin, den die geladenen 2DA-Dateien nicht
+  abdecken. In dem Fall: Feat trotzdem anzeigen (nicht verschlucken), aber
+  mit einem Hinweis markieren (z. B. `(?)` oder ein separater Warnhinweis am
+  Dateiende „N Feats konnten nicht zugeordnet werden, evtl. Custom Content"),
+  statt stillschweigend „frei gewählt" zu unterstellen. Das ist dieselbe
+  Grundhaltung wie beim aktuellen Option-B-Ansatz (lieber ehrlich
+  „unbekannt" zeigen als falsch labeln), nur mit einer echten Datenquelle
+  im Rücken statt einer Handtabelle.
+- **Zeitliche Einordnung:** Gehört inhaltlich zu P2 (2DA/TLK-Datenimport),
+  wo ohnehin die gleiche Grundsatzfrage (welche 2DA-Dateien werden wie
+  bereitgestellt) für `feat.2da`/`skills.2da`/`spells.2da` geklärt werden
+  muss. Im Hauptplan als neuer Punkt **P2.7** vorgesehen (siehe
+  `docs/nwn_bic-cli-plan.md`-Ergänzung unten), NICHT als Ersatz für P2.1/2.2,
+  sondern als deren Erweiterung um klassen-/rassenspezifische Feat-Vergabe.
