@@ -836,3 +836,227 @@ pflegen:
   muss. Im Hauptplan als neuer Punkt **P2.7** vorgesehen (siehe
   `docs/nwn_bic-cli-plan.md`-Ergänzung unten), NICHT als Ersatz für P2.1/2.2,
   sondern als deren Erweiterung um klassen-/rassenspezifische Feat-Vergabe.
+
+## P1.1 (BUILD DETAILS: Level-für-Level) — erledigt in diesem Durchgang
+
+### Datenlage erst geklärt, dann geschrieben
+
+`LvlStatList` (Top-Level GFF-Liste) real per `toJson(root)` an `test2.bic` (Barbar
+Level 2) und `palemas169.bic` (Magier/Bleicher Meister, Level 15, echtes
+Testpaar mit `palemas1691.txt`, Ability-Werte exakt abgeglichen) geprüft, nicht
+angenommen. Vier Fragen empirisch beantwortet, bevor Code geschrieben wurde:
+
+1. **Ist `LvlStatList[i]` = Charakterlevel `i+1`?** Ja — bei `palemas169.bic`
+   wechselt `LvlStatClass` genau an den Indizes 3, 7, 9, 11, 13 auf 34 (Pale
+   Master), was exakt Level 4, 8, 10, 12, 14 in `palemas1691.txt` entspricht
+   (dort ebenfalls „Bleicher Meister"). 1:1-Übereinstimmung, keine Lücken,
+   keine Off-by-one.
+2. **Ist `LvlStatClass` die echte Klassen-ID oder ein Klassenlisten-Index?**
+   Die echte ID (10=Wizard, 34=Pale Master) — bei einem reinen Single-Class-
+   Charakter (Barbar) wären beide Interpretationen nicht unterscheidbar
+   gewesen, aber die Multiklassen-Daten von `palemas169.bic` klären das
+   eindeutig.
+3. **Ist `LvlStatList[i].SkillList`/`.FeatList` kumulativ (Snapshot bis zu
+   diesem Level) oder inkrementell (nur dieses Level)?** Inkrementell, real
+   geprüft: `test2.bic`s Level-1- plus Level-2-`SkillList` (elementweise
+   Summe) ergibt exakt die finale Top-Level-`SkillList`. `FeatList` bei
+   Level 2 enthält nur 1 Feat (195, Uncanny Dodge I) statt der 11 kumulierten
+   Level-1-Feats — ebenfalls eindeutig inkrementell.
+4. **Was bedeutet `LvlStatAbility` (byte)?** Erscheint nur bei den Leveln, wo
+   `palemas1691.txt` „Ability: Int" zeigt (Level 4, 8, 12), Wert immer `3` —
+   passend zur bereits aus P1.2 bestehenden Reihenfolge
+   `abilNames = ["Str", "Dex", "Con", "Int", "Wis", "Cha"]` (Index 3 = Int).
+   Keine neue Enum-Tabelle nötig, direkte Wiederverwendung.
+
+### Wichtiger Fund: Referenztool zeigt „Skills: None" fehlerhaft/immer
+
+`test2.txt` und `palemas1691.txt` zeigen **bei jedem Level** „Skills:\nNone" —
+auch dort, wo laut GFF-Daten nachweislich Punkte investiert wurden (Level 2
+des Barbaren: Discipline/Listen/Parry/Taunt je +1, Intimidate neu +1, real
+gegen die additive Summe geprüft). Das ist offenbar ein Bug oder eine
+Nicht-Implementierung im externen „NWN Tool" selbst, keine bewusste
+Design-Entscheidung des Zielformats.
+
+**Bewusste Abweichung vom exakten Referenztext:** Statt „None" blind zu
+kopieren, zeigt diese Implementierung die echten, additiv verifizierten
+Skillpunkte pro Level (gleicher Filter wie in der FINAL-BUILD-SKILLS-Sektion:
+nur `Rank > 0`), „None" nur wenn tatsächlich keine Punkte investiert wurden.
+Das ist mehr Wert bei praktisch keinem Mehraufwand (die Daten liegen ja
+bereits korrekt lesbar vor) — aber es ist eine explizite Design-Entscheidung,
+kein Zufall, deshalb hier dokumentiert statt stillschweigend eingebaut.
+
+### Fix
+
+Neue Schleife über `LvlStatList` ersetzt den `"working on this section"`-
+Platzhalter. Pro Level: Trennzeile, `Level <N> - <Klasse>`, `Hitpoint dice:
+<Wert>`, optional `Ability: <Name>` (Sentinel-Byte 255, gleiches Muster wie
+`School` aus P1.4), Skills (Rank>0-gefiltert wie oben begründet), Feats
+(gleiche `(CLASS)`/`(RACE)`-Logik wie P1.3 — aber **präziser**: da die Klasse
+dieses spezifischen Levels bekannt ist, reicht ein einzelner
+`bicIsClassFeat(lvlClass, featId)`-Aufruf, keine Schleife über alle Klassen
+des Charakters wie in der FINAL-BUILD-Sektion nötig war, wo die Level-
+Zuordnung fehlte).
+
+**Bewusst nicht übernommen aus der Referenz:** Die fremde Fußzeile
+„Character sheet exported using NWN Tool version 2.0.1 - ..." ist
+Eigenwerbung des externen Tools, keine Charakterdaten — nicht nachgebildet.
+Die Trennzeilen-Länge (`LINE`, 23 Zeichen) folgt der bestehenden Konstante
+des eigenen Programms statt der 30-Zeichen-Variante der Referenzdatei —
+Konsistenz mit dem Rest unserer eigenen Ausgabe wichtiger als exakte
+Zeichen-für-Zeichen-Fremdformat-Kopie, zumal ein 1:1-Textvergleich ohnehin
+erst nach P2 (Übersetzung) möglich ist.
+
+**Bewusst nicht implementiert (außerhalb des Zielformats):** `KnownListN`/
+`MemorizedListN` (gelernte/gespeicherte Zauber pro Level) — im
+Referenzformat taucht dazu keine Zeile auf, also kein Implementierungsbedarf.
+`EpicLevel` — bei allen verfügbaren Testfällen `0` (kein Charakter über
+Level 20), keine golden Referenz für den episch-Fall vorhanden, daher nicht
+angefasst; falls später ein episches Testfixture auftaucht, eigener,
+separater Fix.
+
+### Verifikation — alle sechs verfügbaren `.bic`-Dateien, real kompiliert und gelaufen
+
+| Datei | Ergebnis |
+|---|---|
+| `test.bic` / `test1.bic` (Barbar Lvl 1) | 1 Level-Block, Skills+Feats identisch zur FINAL-BUILD-Sektion (erwartbar bei Level-1-Charakter) |
+| `test2.bic` (Barbar Lvl 2) | 2 Level-Blöcke; Level 2 zeigt korrekt `(CLASS) Uncanny Dodge I` und die neuen Skillpunkte (inkl. neuem Skill „Intimidate") |
+| `test3.bic` (Barbar Lvl 3) | 3 Level-Blöcke; Level 3 zeigt `Cleave` korrekt **ohne** Label (frei gewählt), wie in `test3.txt` |
+| `palemas169.bic` (Magier/Bleicher Meister Lvl 15) | 15 Level-Blöcke; Klassenwechsel exakt an den erwarteten Leveln, `Ability: Int` exakt bei Level 4/8/12, sauberer Dateiabschluss ohne fremde Fußzeile |
+| `aluviandarks169.bic.json` (Elf Magierin Lvl 1, über den bereits aus der P1.3-Session bekannten JSON-Workaround, da die Binärdatei am vorbestehenden `BaseAttackBonus`-Bug crasht) | Level-1-Block zeigt alle 11 Feats korrekt gelabelt (2× CLASS, 8× RACE, 1× frei) — bestätigt den RACE-Zweig auch im Level-Kontext |
+
+`nimpretty --backup:off` dreimal in Folge über die gepatchte Datei — 0
+Änderungen bei jedem Lauf, sofort stabil. `nim check` 0 neue Fehler/Warnungen
+(nur die vorbestehende `tables`-Unused-Import-Warnung). Regressionscheck:
+Ausgabe für `test1.bic` bis einschließlich `STARTING ABILITIES`
+(FINAL BUILD, P1.2, P1.3, P1.4) byte-identisch zum Stand vor diesem Patch.
+
+### CI-Ergänzung
+
+Drei neue Zeilen im bestehenden „larger-character smoke test" (kein neues
+Fixture nötig, `test1.bic` deckt den einfachen Barbar-Fall ab):
+
+```yaml
+          grep -Fq 'Level 1 - Barbarian' "$generated"
+          grep -Fq 'Hitpoint dice: 12' "$generated"
+          # the P1.1 placeholder must be fully replaced by the level-by-level section
+          if grep -Fq 'working on this section' "$generated"; then
+            exit 1
+          fi
+```
+
+Real gegen die generierte Ausgabe durchgespielt (positiv), bevor der Diff
+geschrieben wurde — gleiche Vorsicht wie beim `grep -Fqv`-Fehler aus der
+letzten Runde.
+
+## Ehrlicher Hinweis (P1.1)
+
+**Nicht abgedeckt:** `EpicLevel` (Charaktere über Level 20) — keine golden
+Referenz vorhanden, nicht getestet. `KnownListN`/`MemorizedListN` bewusst
+ausgelassen (kein Bedarf laut Zielformat, aber falls das Zielformat sich
+später ändert — z. B. wenn P2 auch Zauberlisten übersetzen soll — müsste
+das hier nachgezogen werden). Die „Skills: None"-Abweichung vom exakten
+Referenztext ist eine bewusste Verbesserung, keine 1:1-Nachbildung — falls
+das aus irgendeinem Grund unerwünscht ist (z. B. weil ein zukünftiger
+exakter Diff-Vergleich gegen die Referenzdateien geplant ist), ist das ein
+Einzeiler zum Zurückdrehen (`"None"` statt der Schleife schreiben). Alle
+Verifikationen liefen unter Linux (dieser Container) mit `nim` 1.6.14 —
+nicht auf einem echten Windows/macOS-Runner gegengeprüft, dafür existiert
+die CI-Matrix.
+
+## Fix: `BaseAttackBonus`-Crash (vorbestehend, aus P1.3 dokumentiert) — erledigt in diesem Durchgang
+
+### Erst der volle Umfang geprüft, dann erst der eine Ein-Zeiler
+
+`docs/nwn_bic-analyse.md` warnte allgemein vor „Abhängigkeit von konkreten
+GFF-Feldern" ohne zu sagen, wie viele der aktuell genutzten Feldzugriffe
+davon tatsächlich betroffen sind. Statt das zu einer großen, ungefragten
+Härtungsaktion aufzublasen: alle `root["Feld", Typ]`-Zugriffe in
+`nwn_bic.nim` aufgelistet (`grep -oE`) und gegen alle sechs verfügbaren
+`.bic`-Dateien real geprüft (`toJson(root)`-Dump, Feldpräsenz-Abgleich).
+
+Ergebnis: **`BaseAttackBonus` ist das einzige aktuell nicht-optional
+gelesene Feld, das bei einer der sechs verfügbaren Dateien
+(`aluviandarks169.bic`) tatsächlich fehlt.** Alle anderen nicht-optionalen
+Zugriffe (die sechs Attribute, `Gender`, `GoodEvil`, `LawfulChaotic`,
+`Race`, die Namens-/Beschreibungs-LocStrings, `ClassList`/`FeatList`/
+`SkillList`/`LvlStatList`) sind bei allen sechs Testfällen vorhanden. Der
+Fix bleibt damit klein und gezielt — kein Anlass, ungefragt weitere Felder
+mit anzufassen, die aktuell empirisch nirgends fehlen (das wäre eine
+eigene, größere Härtungsaktion für einen künftigen Anlassfall, nicht Teil
+dieses Fixes).
+
+### Fix
+
+```nim
+output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", 0.GffByte] & "\n" &
+```
+
+Gleiches Muster wie die bereits im selben Programm etablierten
+Default-Overloads (`Age` → `0.GffInt`, `ArmorClass`/`MaxHitPoints` →
+`0.GffShort`, die drei Saves → `0.GffChar`) — keine neue Konvention
+eingeführt. Fallback `0` ist hier semantisch unproblematisch: der
+betroffene Charakter ist ein Level-1-Magier, dessen realer BAB laut
+Regelwerk (schlechte Angriffsbonus-Progression für Zauberklassen) bei
+Level 1 ohnehin typischerweise `+0` beträgt — kein irreführender Platzhalter.
+
+### Verifikation
+
+`aluviandarks169.bic` läuft jetzt zum ersten Mal überhaupt vollständig
+durch (vorher: Absturz nach der IDENTITY-Sektion, der Rest der Datei wurde
+nie real durchlaufen). Volle Ausgabe geprüft, keine weiteren verdeckten
+Folgefehler: STARTING ABILITIES bestätigt die P1.2-Rassenmodifikator-
+Formel unabhängig ein zweites Mal (jetzt an den *echten* Werten dieser
+Datei: Dex 14 = 8+2 Elf-Modifikator + 4 investiert, Con 14 = 8-2 + 8 —
+beide exakt), FEATS/Level-1-Sektion zeigen dieselben elf korrekt gelabelten
+Feats wie beim JSON-Workaround aus der P1.3-Session (bestätigt, dass der
+damalige Workaround keine Verzerrung eingeführt hatte).
+
+Regression: alle fünf bereits vorher fehlerfrei laufenden Dateien
+(`test`, `test1`, `test2`, `test3`, `palemas169`) byte-identisch zum Stand
+vor diesem Fix — der Ein-Zeiler ändert nur den Fehlerpfad für das eine
+fehlende Feld, kein anderes Verhalten. `nimpretty --backup:off` dreimal
+stabil, `nim check` keine neuen Fehler/Warnungen.
+
+### CI-Ergänzung
+
+Neuer eigener Smoke-Test-Schritt „Run missing-field smoke test" (eigene
+Datei, `aluviandarks169.bic`, bisher nicht in CI verwendet — passt nicht
+als Zeile in den bestehenden `test1.bic`-Smoke-Test):
+
+```yaml
+      - name: Run missing-field smoke test
+        shell: bash
+        run: |
+          set -eu
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            binary="bin/nwn_bic.exe"
+          else
+            binary="bin/nwn_bic"
+          fi
+          smoke_dir="$RUNNER_TEMP/nwn_bic-smoke-missing-field"
+          mkdir -p "$smoke_dir"
+          generated="$GITHUB_WORKSPACE/examples/bic/aluviandarks169.txt"
+          "$binary" "$GITHUB_WORKSPACE/examples/bic/aluviandarks169.bic"
+          test -f "$generated"
+          test -s "$generated"
+          grep -Fq 'Base Att. Bonus: 0' "$generated"
+          mv "$generated" "$smoke_dir/aluviandarks169.txt"
+```
+
+Real durchgespielt, bevor der Diff geschrieben wurde. Dabei prompt wieder
+denselben Fallstrick wie bei der ersten P1.2-Verifikation gebaut: lokal mit
+`GITHUB_WORKSPACE` auf den echten Checkout gesetzt getestet, das `mv` hat
+`examples/bic/aluviandarks169.txt` aus dem Checkout entfernt — sofort per
+`git checkout -- ...` bemerkt und zurückgesetzt, kein Schaden. Im echten
+CI-Runner unproblematisch (ephemer), aber eine wiederkehrende Erinnerung,
+lokale CI-Trockenläufe grundsätzlich in einem Kopierverzeichnis zu machen,
+nie direkt gegen den realen Checkout mit `GITHUB_WORKSPACE`-Umgebungsvariable.
+
+## Ehrlicher Hinweis
+
+Dieser Fix deckt nur das eine Feld ab, das empirisch bekannt fehlt. Sollte
+künftig eine `.bic`-Datei auftauchen, der eines der anderen aktuell
+ungeschützten Felder (Attribute, `Gender`, `GoodEvil`, `LawfulChaotic`,
+`Race`, LocStrings, Listen) fehlt, crasht das Programm dort weiterhin —
+das wäre dann ein eigener, neuer Fix mit demselben Muster, kein
+grundsätzliches Redesign nötig.
