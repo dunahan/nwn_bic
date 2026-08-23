@@ -2,14 +2,12 @@ import tables
 
 # write line only if it has something with value?
 
-
 #[ cut down LocStrings
 proc bicCutLocString*(s: string): string =
   var start = 0
   delete(s, start..find(s, '"'))
   delete(s, find(s, '"')..find(s, '}'))
   result s ]#
-
 
 #get race by int
 proc bicRace*(num: byte): string =
@@ -67,6 +65,36 @@ proc bicRace*(num: byte): string =
     else:
       "Unknown"
 
+# order: Str, Dex, Con, Int, Wis, Cha -- gleiche Reihenfolge wie ABILITIES
+proc bicRaceAbilityMods*(num: byte): array[6, int] =
+  result = case num:
+    of 0: [0, 0, 2, 0, 0, -2]
+    of 1: [0, 2, -2, 0, 0, 0]
+    of 2: [-2, 0, 2, 0, 0, 0]
+    of 3: [-2, 2, 0, 0, 0, 0]
+    of 5: [2, 0, 0, -2, 0, -2]
+    else: [0, 0, 0, 0, 0, 0]
+
+# ponytail: only pairs verified against examples/bic/; unverified = no label, not "definitely free". Upgrade: read real cls_feat_<class>.2da/racial data (P2.7).
+proc bicIsClassFeat*(classId, featId: int): bool =
+  case classId
+  of 0: # Barbarian
+    featId in [3, 4, 32, 45, 46, 194, 195, 293, 1089]
+  of 10: # Wizard
+    featId in [51, 303, 945]
+  of 34: # Pale Master
+    featId in [228, 886, 889, 890, 891]
+  else:
+    false
+
+proc bicIsRaceFeat*(raceId, featId: int): bool =
+  case raceId
+  of 1: # Elf
+    featId in [235, 236, 237, 238, 239, 240, 256, 354]
+  of 6: # Human
+    featId == 258
+  else:
+    false
 
 #get gender by int
 proc bicGender*(num: byte): string =
@@ -77,7 +105,6 @@ proc bicGender*(num: byte): string =
       "Female"
     else:
       "Unknown"
-
 
 # get classname by int
 proc bicClass*(num: int): string =
@@ -131,6 +158,18 @@ proc bicClass*(num: int): string =
     else:
       "Unknown"
 
+proc bicSchool*(num: byte): string =
+  result = case num:
+    of 0: "General"
+    of 1: "Abjuration"
+    of 2: "Conjuration"
+    of 3: "Divination"
+    of 4: "Enchantment"
+    of 5: "Evocation"
+    of 6: "Illusion"
+    of 7: "Necromancy"
+    of 8: "Transmutation"
+    else: "Unknown"
 
 # get Alignment Lawful/Chaotic
 proc bicAlignmLC*(num: byte): string =
@@ -143,7 +182,6 @@ proc bicAlignmLC*(num: byte): string =
       "Chaotic"
     else:
       ""
-
 
 # get Alignment Good/Evil
 proc bicAlignmGE*(num: byte): string =

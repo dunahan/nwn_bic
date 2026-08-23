@@ -130,7 +130,25 @@ jobs:
           grep -Fq 'FINAL BUILD' "$generated"
           grep -Fq 'Discipline: 4' "$generated"
           grep -Fq 'Armor Proficiency (light)' "$generated"
+          # test1.bic is a Barbarian (no School field) -- School: must not leak in (P1.4 regression)
+          if grep -Fq 'School:' "$generated"; then
+            exit 1
+          fi
           grep -Fq 'BUILD DETAILS' "$generated"
+          grep -Fq 'STARTING ABILITIES' "$generated"
+          grep -Fq 'Str: 16 (base 08+08)' "$generated"
+          grep -Fq '(CLASS) Barbarian Fast Movement' "$generated"
+          grep -Fq '(RACE) Quick To Master' "$generated"
+          # Power Attack is a freely chosen feat -- must stay unlabeled (P1.3 regression)
+          if grep -Fq '(CLASS) Power Attack' "$generated"; then
+            exit 1
+          fi
+          grep -Fq 'Level 1 - Barbarian' "$generated"
+          grep -Fq 'Hitpoint dice: 12' "$generated"
+          # the P1.1 placeholder must be fully replaced by the level-by-level section
+          if grep -Fq 'working on this section' "$generated"; then
+            exit 1
+          fi
 
           mv "$generated" "$smoke_dir/test1.txt"
 
@@ -156,3 +174,27 @@ jobs:
           fi
           grep -Fq 'Error:' "$err_file"
           test ! -f "$RUNNER_TEMP/nwn_bic-does-not-exist.txt"
+
+      - name: Run missing-field smoke test
+        shell: bash
+        run: |
+          set -eu
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            binary="bin/nwn_bic.exe"
+          else
+            binary="bin/nwn_bic"
+          fi
+
+          # aluviandarks169.bic has no BaseAttackBonus field -- a non-optional
+          # field access there used to crash with a Nim KeyError. The fix
+          # (defaulted access) must let the file complete instead.
+          smoke_dir="$RUNNER_TEMP/nwn_bic-smoke-missing-field"
+          mkdir -p "$smoke_dir"
+          generated="$GITHUB_WORKSPACE/examples/bic/aluviandarks169.txt"
+          "$binary" "$GITHUB_WORKSPACE/examples/bic/aluviandarks169.bic"
+          test -f "$generated"
+          test -s "$generated"
+          grep -Fq 'Base Att. Bonus: 0' "$generated"
+
+          mv "$generated" "$smoke_dir/aluviandarks169.txt"

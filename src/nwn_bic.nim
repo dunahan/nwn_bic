@@ -73,9 +73,11 @@ if not isNil(output):
   var i, c: int
   for i in countup(1, nbrc): # using a for loop fot the classes
     c = i - 1
+    let school = clist[c]["School", 255.GffByte]
+    let schoolSuffix = if school.byte != 255: ", School: " & bicSchool(
+        school.byte) else: ""
     output.writeLine(" - " & bicClass(clist[c]["Class", GffInt]) & " (" &
-      $clist[c]["ClassLevel", c.GffShort] & ")")
-#   "School: " & $clist[c]["School", byte])                         # if that exist, print it too?!
+      $clist[c]["ClassLevel", c.GffShort] & ")" & schoolSuffix)
 
   # print those final abilities
   output.writeLine("\nABILITIES:" & "\n" &
@@ -93,7 +95,7 @@ if not isNil(output):
   output.writeLine("  Experience: " & $root["Experience", 0.GffDWord] & "\n" &
     "  Hit Points: " & $root["MaxHitPoints", 0.GffShort])
 # output.writeLine("  Num. Attacks: " & $root["NumAttacks", byte])  # is in gff, but not accessible?
-  output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", byte] & "\n" &
+  output.writeLine("  Base Att. Bonus: " & $root["BaseAttackBonus", 0.GffByte] & "\n" &
     "  Nat. AC/Act. AC: " & # $root["NaturalAC", byte] & " / " & # commented out until a solution is possible
     $root["ArmorClass", 0.GffShort]) # works for 1.69 but not for EE?
   output.writeLine("  Will Save/Bonus: " & $root["WillSaveThrow", 0.GffChar] & " / " &
@@ -121,16 +123,77 @@ if not isNil(output):
   # ponytail: GffWord (uint16) doesn't implicitly convert to int like GffInt does, hence the .int below
   var flist = root["FeatList", GffList]
   var nbrf = count($flist, "GffStruct")
+  let charRace = root["Race", byte].int
   i = 0
   c = 0
   for i in countup(1, nbrf):
     c = i - 1
-    let featId = flist[c]["Feat", GffWord]
-    output.writeLine(" - " & bicFeat(featId.int))
+    let featId = flist[c]["Feat", GffWord].int
+    var origin = ""
+    if bicIsRaceFeat(charRace, featId):
+      origin = "(RACE) "
+    else:
+      for cc in 0..<nbrc:
+        if bicIsClassFeat(clist[cc]["Class", GffInt], featId):
+          origin = "(CLASS) "
+          break
+    output.writeLine(" - " & origin & bicFeat(featId))
 
   # those section should later show the build process per taken level
   output.writeLine("\n\n\n" & LINE, "\n     BUILD DETAILS\n", LINE)
-  output.writeLine("working on this section")
+
+  let mods = bicRaceAbilityMods(root["Race", byte])
+  let finals = [root["Str", byte].int, root["Dex", byte].int, root["Con", byte].int,
+                root["Int", byte].int, root["Wis", byte].int, root["Cha", byte].int]
+  const abilNames = ["Str", "Dex", "Con", "Int", "Wis", "Cha"]
+  output.writeLine("\nSTARTING ABILITIES:")
+  for idx in 0..5:
+    let base = 8 + mods[idx]
+    let delta = finals[idx] - base
+    let sign = if delta < 0: "-" else: "+"
+    output.writeLine("  " & abilNames[idx] & ": " & $finals[idx] & " (base " &
+      intToStr(base, 2) & sign & intToStr(abs(delta), 2) & ")")
+
+  # level-by-level build history: LvlStatList[i] = character level i+1; LvlStatClass
+  # tracks the real class ID even across multiclass level-ups (verified: palemas169.bic)
+  var lvlList = root["LvlStatList", GffList]
+  var nbrl = count($lvlList, "GffStruct")
+  for lvlIdx in 0..<nbrl:
+    let lvlEntry = lvlList[lvlIdx]
+    let lvlClass = lvlEntry["LvlStatClass", byte].int
+    output.writeLine("\n" & LINE)
+    output.writeLine("Level " & $(lvlIdx + 1) & " - " & bicClass(lvlClass))
+    output.writeLine("Hitpoint dice: " & $lvlEntry["LvlStatHitDie", byte])
+    let abilInc = lvlEntry["LvlStatAbility", 255.GffByte]
+    if abilInc.byte != 255:
+      output.writeLine("Ability: " & abilNames[abilInc.byte.int])
+    # ponytail: reference tool prints "Skills: None" unconditionally, even where points were spent -- showing the real per-level ranks instead, the data is right there (verified additive on test2.bic).
+    output.writeLine("Skills:")
+    var lvlSkills = lvlEntry["SkillList", GffList]
+    var nbrls = count($lvlSkills, "GffStruct")
+    var anySkill = false
+    for si in 0..<nbrls:
+      let rank = lvlSkills[si]["Rank", byte]
+      if rank > 0:
+        output.writeLine(" - " & bicSkill(si) & ": " & $rank)
+        anySkill = true
+    if not anySkill:
+      output.writeLine("None")
+
+    output.writeLine("\nFeats:")
+    var lvlFeats = lvlEntry["FeatList", GffList]
+    var nbrlf = count($lvlFeats, "GffStruct")
+    if nbrlf == 0:
+      output.writeLine("None")
+    for fi in 0..<nbrlf:
+      let featId = lvlFeats[fi]["Feat", GffWord].int
+      var origin = ""
+      if bicIsRaceFeat(charRace, featId):
+        origin = "(RACE) "
+      elif bicIsClassFeat(lvlClass, featId):
+        origin = "(CLASS) "
+      output.writeLine(" - " & origin & bicFeat(featId))
+    output.writeLine("")
 
   # finally were ready to close the file, due all is printed...
   output.close()
