@@ -1,6 +1,6 @@
 # Plan: Vervollständigung des `nwn_bic`-CLI-Programms
 
-Stand: 18. August 2026 (Plan) · **Update 20. August 2026: P0 (0.1–0.4) vollständig umgesetzt**
+Stand: 18. August 2026 (Plan) · **Update 20. August 2026: P0 (0.1–0.4) vollständig umgesetzt · Update 23. August 2026: P1 (1.1–1.4) vollständig umgesetzt**
 Basis: Code-Review von `dunahan/nwn_bic` (main) + Abgleich mit der Lazy-Coding-Leiter aus `DietrichGebert/ponytail`
 
 > **Status-Update:** Alle vier P0-Punkte sind gefixt, jeweils real gegen die
@@ -44,7 +44,7 @@ Das ist exakt der Fall, für den `ponytail` steht: Sprosse 5 der Leiter ("*alrea
 | STATISTICS | funktioniert überwiegend; `ArmorClass`/`NaturalAC`-Zugriff laut Kommentar im Code selbst als unsicher markiert ("works for 1.69 but not for EE?") |
 | SKILLS | ✅ **P0.1 gefixt.** War kein ID-Bug (Position im Array *ist* die Skill-ID, deckt sich mit `bicSkill()`), sondern: `Rank` wurde nie gelesen und nie auf `> 0` gefiltert. Jetzt: nur investierte Skills, mit Wert. |
 | FEATS | ✅ **P0.2 gefixt.** War ein echter ID-Bug: `FeatList`-Einträge tragen ihre eigene ID im `Feat`-Feld (word/uint16), der Code nutzte den Schleifenindex. Gefährlicher als der SKILLS-Bug, weil er nicht sichtbar mit "Unknown" scheiterte, sondern plausible, aber falsche Feat-Namen druckte. |
-| BUILD DETAILS | nicht implementiert (`"working on this section"`) – weiterhin offen, das ist P1.1 |
+| BUILD DETAILS | ✅ **P1.1 gefixt.** Level-für-Level (Klasse via `LvlStatClass`, Trefferwürfel, Skillpunkte, Feats mit `(CLASS)`/`(RACE)`-Herkunft, Attributssteigerung via `LvlStatAbility`), empirisch gegen `test2`/`test3`/`palemas169` verifiziert. Bewusste Abweichung vom externen Referenztext bei „Skills:" (echte Werte statt des dort fehlerhaft immer gezeigten „None"), dokumentiert im Status-Doc. |
 | Ausgabepfad | ✅ **P0.3 gefixt.** `dir` wird jetzt tatsächlich benutzt (`dir / (name & ".txt")`); beide CI-Smoke-Tests mussten mitgezogen werden, da sie explizit auf dem alten (fehlerhaften) Verhalten aufbauten. |
 | Fehlerbehandlung | ✅ **P0.4 gefixt.** `try/except CatchableError` um Datei-Öffnen + GFF-Parsing (deckt "Datei nicht gefunden" und "kein gültiges GFF" ab), `else`-Zweig für den bisher stillen `output`-ist-`nil`-Fall. Bewusst **nicht** abgedeckt: eine Datei mit plausiblem Header, aber absurdem `structCount` kann den Prozess per OOM-Kill beenden – das ist kein Nim-Exception-Pfad und keine "S/M"-Aufgabe mehr, sondern Bounds-Checking in der Library selbst. Dokumentiert, nicht gefixt. |
 | Sprache | Codeausgabe komplett Englisch, Referenzdateien (`*1.txt`, aus "NWN Tool") komplett Deutsch – keine Umschaltung vorgesehen |
@@ -122,7 +122,7 @@ Vollständige Herleitung, verworfene Zwischenstände und alle Testkommandos: `do
 
 | # | Aufgabe | Warum | Aufwand |
 |---|---|---|---|
-| 1.1 | `BUILD DETAILS` implementieren: Level-für-Level (Klasse, Trefferwürfel, Skillpunkte, Feats), auf Basis dessen, was tatsächlich im GFF steckt (`test1.bic.json` als Referenz für die Feldnamen nehmen, nicht raten) | einziger noch komplett fehlender Abschnitt, Kernzweck laut README | M/L |
+| 1.1 | `BUILD DETAILS` implementieren: Level-für-Level (Klasse, Trefferwürfel, Skillpunkte, Feats), auf Basis dessen, was tatsächlich im GFF steckt (`test1.bic.json` als Referenz für die Feldnamen nehmen, nicht raten) | einziger noch komplett fehlender Abschnitt, Kernzweck laut README | M/L | ✅ **Erledigt.** `LvlStatList[i]` = Charakterlevel `i+1`, empirisch bestätigt (nicht angenommen): `LvlStatClass` trägt die echte Klassen-ID (multiklassen-fähig, real an `palemas169.bic` verifiziert), `SkillList`/`FeatList` pro Level sind inkrementell, nicht kumulativ (additiv geprüft gegen die finale Top-Level-Liste). Feat-Herkunft nutzt die P1.3-Tabelle, jetzt präziser (Level-Klasse bekannt, keine Schleife über alle Klassen nötig). Bewusste Abweichung: zeigt echte Skillpunkte pro Level statt des im externen Referenztool fehlerhaft immer gezeigten „None". Volle Herleitung: `docs/nwn_bic-cli-plan-status.md`. |
 | 1.2 | `STARTING ABILITIES` mit Punktekauf-Aufschlüsselung (`base 08+08`) ergänzen | Teil des Referenzformats, direkt neben 1.1 sinnvoll | S | ✅ **Erledigt.** `base = 8 + Rassenmodifikator`. Formel gegen `aluviandarks1691.txt` kontrollgerechnet (kein exaktes Testpaar, s. Status-Doc): 5/6 exakt inkl. beider Elfen-Modifikatoren, Int-Abweichung dokumentiert (vermutlich inhärenter Bonus, nicht modellierbar). |
 | 1.3 | Feat-Herkunft kennzeichnen: `(CLASS)` / `(RACE)` / frei gewählt, wie in `aluviandarks1691.txt` | ohne Herkunft ist die Feat-Liste für den eigentlichen Zweck (Levelaufbau nachvollziehen) wenig aussagekräftig | M | ✅ **Erledigt, bewusst eingeschränkt (Option B).** Kleine Lookup-Tabelle `bicIsClassFeat`/`bicIsRaceFeat` in `helper.nim`, nur für (Klasse/Rasse, Feat)-Paare verifiziert gegen `test1`/`test2`/`test3`/`palemas169`/`aluviandarks169` (Barbar, Mensch, Magier, Bleicher Meister, Elf). Unbekannte Paare bleiben ohne Label statt geraten. Kein GFF-Feld und keine 2DA-Tabelle im Repo kodiert diese Info direkt — echte, allgemeingültige Lösung braucht `cls_feat_<klasse>.2da` + Rassen-Feat-Quelle, siehe neuer Punkt **P2.7**. Volle Herleitung: `docs/nwn_bic-cli-plan-status.md`. |
 | 1.4 | `CLASSES`: `School:`-Zusatz bei Zauberklassen ergänzen (Code-Kommentar dazu existiert schon, ist nur auskommentiert) | im Referenzformat vorhanden, im Code bereits vorbereitet | S | ✅ **Erledigt.** Optionaler Feldzugriff (`clist[c]["School", 255.GffByte]`, Sentinel 255) real verifiziert. Kein CI-Fixture mit gesetztem `School`-Feld zum Zeitpunkt der Implementierung, inzwischen durch `palemas169.bic` (Magier/Bleicher Meister) abgedeckt. |
@@ -159,11 +159,11 @@ Vollständige Herleitung, verworfene Zwischenstände und alle Testkommandos: `do
 ## 6. Empfohlene Reihenfolge
 
 ```
-P0 (0.1–0.4) ✅  →  P1 (1.1–1.4)  →  P2 (2.1–2.6)  →  P3 (3.1–3.3)  →  P4
-   erledigt          nächster
-                      Schritt
+P0 (0.1–0.4) ✅  →  P1 (1.1–1.4) ✅  →  P2 (2.1–2.7)  →  P3 (3.1–3.3)  →  P4
+   erledigt          erledigt           nächster
+                                          Schritt
 ```
 
-P0 zuerst, weil alles Weitere (insbesondere die Regressionstests in P3) auf korrekten Werten aufbaut – das war die Prämisse und ist jetzt erfüllt: `test1.bic` liefert reale, verifizierte Werte für SKILLS und FEATS, landet am richtigen Pfad, und Datei-/GFF-Fehler brechen nicht mehr mit Stacktrace ab. P2 bewusst nach P1: Erst mit funktionierendem `BUILD DETAILS` wird sichtbar, wie viele Feat-/Spell-Namen tatsächlich gebraucht werden – danach lohnt sich der Umbau auf 2DA/TLK erst recht, weil er sonst an halbfertigem Code vorbeigeplant würde. Der bereits real beobachtete Tabellenlücken-Fund bei P0.2 (Feat-ID 1089 → "Unkown") ist ein zusätzliches, konkretes Argument für P2.1 – nicht mehr nur theoretisch.
+P0 zuerst, weil alles Weitere (insbesondere die Regressionstests in P3) auf korrekten Werten aufbaut – das war die Prämisse und ist erfüllt: `test1.bic` liefert reale, verifizierte Werte für SKILLS und FEATS, landet am richtigen Pfad, und Datei-/GFF-Fehler brechen nicht mehr mit Stacktrace ab. Mit P1.1 (Level-für-Level) ist jetzt auch sichtbar, wie viele Feat-/Spell-Namen tatsächlich pro Level gebraucht werden – der Umbau auf 2DA/TLK (P2) lohnt sich jetzt erst recht, weil er sonst an halbfertigem Code vorbeigeplant worden wäre. Der bereits real beobachtete Tabellenlücken-Fund bei P0.2 (Feat-ID 1089 → "Unkown") ist ein zusätzliches, konkretes Argument für P2.1 – nicht mehr nur theoretisch. Der bei P1.3 gefundene Datenlücken-Fund (keine `cls_feat_*.2da`/Rassen-Feat-Quelle im Repo) ist das gleiche Argument für den neuen Punkt P2.7.
 
 **Kurzfassung des größten Einzeleffekts:** Punkt 2.1–2.4 bedeutet netto **Code löschen** (rund 3200 von 3671 Zeilen in `helper.nim` fallen weg) bei gleichzeitig **mehr** Funktionsumfang (automatische DE/EN-Übersetzung statt einer hart kodierten Sprache). Das ist der Kern dessen, was `ponytail` mit "*already-installed dependency solves it*" meint – hier lässt sich das wörtlich am eigenen Repo nachweisen, weil die Rohdaten (`examples/2da`, `examples/tlk`) bereits vorliegen.
