@@ -5,45 +5,51 @@ on:
     tags:
       - '*'
 
-env:
-  NIMVER: "1.6.4"
+# ponytail: P0.5 -- GITHUB_TOKEN needs this explicitly for release creation
+# under default (read-only) repo permission settings.
+permissions:
+  contents: write
 
 jobs:
   build-linux-win:
-    runs-on: ubuntu-18.04
+    # ponytail: P0.1 -- ubuntu-18.04 no longer exists as a hosted runner image.
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         bintype: [linux, win-i386, win-amd64]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Cache nim, nimble
-        uses: actions/cache@v2
-        id: cache
+      # ponytail: P0.2/P0.3 -- same tool build.yml already uses. Replaces the
+      # whole manual "download nim-$NIMVER, tar xf, set PATH" block below; the
+      # action resolves and caches a real toolchain instead of a hardcoded,
+      # now-incompatible 1.6.4 (nwn_bic.nimble requires nim >= 2.0.0).
+      - name: Set up Nim
+        uses: jiro4989/setup-nim-action@v2
         with:
-          key: build-${{ matrix.bintype }}-nim-${{ env.NIMVER }}--1
-          path: |
-            nim
-            ~/.nimble
+          nim-version: ${{ vars.NIM_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install mingw
         if: matrix.bintype != 'linux'
         run: sudo apt-get install -y --no-install-recommends mingw-w64
 
-      - name: Download nim
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir nim
-          cd nim
-          wget https://nim-lang.org/download/nim-$NIMVER-linux_x64.tar.xz
-          tar xf nim-$NIMVER-linux_x64.tar.xz
-
-      - name: Set up PATH
-        run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
-
+      # ponytail: P0.4 -- same GCC-14/docopt.nim.c workaround build.yml already
+      # carries. Verified LOCALLY that nwn_bic itself (src/nwn_bic.nim against
+      # neverwinter 2.2.0) compiles clean under Nim 2.0.0 with this nim.cfg
+      # flag, end-to-end against a real binary .bic built via the library's
+      # own write()/gffRootFromJson(). NOT independently re-verified here that
+      # this exact --passNim flag clears docopt.nim.c specifically under a
+      # real `nimble install --depsOnly` run: this container has no working
+      # network path to a full nimble self-build (nimble's own HEAD does not
+      # self-compile cleanly against Nim 2.0.0 for unrelated reasons -- an
+      # effect-checking issue in nimblepkg/download.nim, not a P0 concern).
+      # Carried over as-is from the already-verified build.yml fix, same
+      # dependency (neverwinter, same docopt requirement), same failure
+      # class -- but flagged here as inherited, not independently reproduced.
       - name: Install nimble packages
-        run: nimble install --depsOnly -y
+        run: nimble install --depsOnly -y --passNim:"--passC:-Wno-error=incompatible-pointer-types"
 
       - name: Compile for Linux
         if: matrix.bintype == 'linux'
@@ -51,7 +57,7 @@ jobs:
 
       - name: Upload Linux artifact
         if: matrix.bintype == 'linux'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: nwn_bic.linux.amd64
           path: bin/*
@@ -74,7 +80,7 @@ jobs:
 
       - name: Upload Windows i386 artifact
         if: matrix.bintype == 'win-i386'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: nwn_bic.windows.i386
           path: bin/*
@@ -88,7 +94,7 @@ jobs:
 
       - name: Upload Windows amd64 artifact
         if: matrix.bintype == 'win-amd64'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: nwn_bic.windows.amd64
           path: bin/*
@@ -97,51 +103,37 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Cache nim, nimble
-        uses: actions/cache@v2
-        id: cache
+      # ponytail: P0.2/P0.3 -- same as build-linux-win above. Replaces the
+      # from-source Nim bootstrap (build.sh + koch boot + koch tools), which
+      # was also pinned to the wrong (1.6.4) version and is ~10x slower than
+      # this action. Kept as its own P1.2 follow-up to actually delete the
+      # now-dead manual-build steps; this diff only fixes the P0 blockers.
+      - name: Set up Nim
+        uses: jiro4989/setup-nim-action@v2
         with:
-          key: build-macos-${{ env.NIMVER }}--1
-          path: |
-            nim
-            ~/.nimble
-
-      - name: Download and build nim, add to PATH
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir nim
-          cd nim
-          wget https://nim-lang.org/download/nim-$NIMVER.tar.xz
-          tar xf nim-$NIMVER.tar.xz
-          cd nim-$NIMVER
-          sh build.sh
-          bin/nim c koch
-          ./koch boot -d:release
-          ./koch tools
-
-      - name: Set up PATH
-        run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
+          nim-version: ${{ vars.NIM_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install nimble packages
-        run: nimble install --depsOnly -y
+        run: nimble install --depsOnly -y --passNim:"--passC:-Wno-error=incompatible-pointer-types"
 
       - name: Compile for macOS
         run: nimble build -d:release
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: nwn_bic.macos.amd64
           path: bin/*
 
   release:
     needs: [build-linux-win, build-macos]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Download Linux artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: nwn_bic.linux.amd64
           path: bin-linux
@@ -154,7 +146,7 @@ jobs:
           zip nwn_bic.linux.amd64.zip *
 
       - name: Download Windows i386 artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: nwn_bic.windows.i386
           path: bin-windows-i386
@@ -164,7 +156,7 @@ jobs:
         run: zip nwn_bic.windows.i386.zip *
 
       - name: Download Windows amd64 artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: nwn_bic.windows.amd64
           path: bin-windows-amd64
@@ -174,7 +166,7 @@ jobs:
         run: zip nwn_bic.windows.amd64.zip *
 
       - name: Download macOS artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: nwn_bic.macos.amd64
           path: bin-macos
