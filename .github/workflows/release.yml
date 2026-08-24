@@ -16,7 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        bintype: [linux, win-i386, win-amd64]
+        # ponytail: P2.4 resolved (2026-08-24, Tobias) -- only the usual
+        # platform binaries ship on the GitHub release; anything niche
+        # (i386, etc.) is available on request or self-built from source.
+        bintype: [linux, win-amd64]
     steps:
       - name: Checkout
         # ponytail: P1.4 -- version parity with build.yml, one maintained value.
@@ -84,21 +87,6 @@ jobs:
       # the prebuilt one setup-nim-action provides; kept here regardless as
       # a zero-cost safety net -- it can only help, never hurt, if -d:mingw
       # already resolves correctly on the real runner.
-      - name: Compile for Windows i386
-        if: matrix.bintype == 'win-i386'
-        run: |
-          nimble build -d:release -d:mingw --cpu:i386 \
-            --gcc.exe:i686-w64-mingw32-gcc --gcc.linkerexe:i686-w64-mingw32-gcc \
-            --passL:-static --dynlibOverrideAll
-          for f in bin/*; do mv "$f" "$f.exe"; done
-
-      - name: Upload Windows i386 artifact
-        if: matrix.bintype == 'win-i386'
-        uses: actions/upload-artifact@v4
-        with:
-          name: nwn_bic.windows.i386
-          path: bin/*
-
       - name: Compile for Windows amd64
         if: matrix.bintype == 'win-amd64'
         run: |
@@ -127,9 +115,6 @@ jobs:
   smoke-test-windows:
     needs: build-linux-win
     runs-on: windows-latest
-    strategy:
-      matrix:
-        artifact: [nwn_bic.windows.amd64, nwn_bic.windows.i386]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -137,7 +122,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
+          name: nwn_bic.windows.amd64
           path: bin
 
       - name: Run against a real character
@@ -218,17 +203,6 @@ jobs:
           chmod +x *
           zip nwn_bic.linux.amd64.zip *
 
-      - name: Download Windows i386 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nwn_bic.windows.i386
-          path: bin-windows-i386
-
-      - name: Pack Windows i386 artifact
-        # ponytail: P1.1 -- no dll/ dir to fold in anymore, static binary only.
-        working-directory: bin-windows-i386
-        run: zip nwn_bic.windows.i386.zip *
-
       - name: Download Windows amd64 artifact
         uses: actions/download-artifact@v4
         with:
@@ -236,6 +210,7 @@ jobs:
           path: bin-windows-amd64
 
       - name: Pack Windows amd64 artifact
+        # ponytail: P1.1 -- no dll/ dir to fold in anymore, static binary only.
         working-directory: bin-windows-amd64
         run: zip nwn_bic.windows.amd64.zip *
 
@@ -264,6 +239,5 @@ jobs:
             --draft \
             --title "${GITHUB_REF_NAME}" \
             bin-linux/nwn_bic.linux.amd64.zip \
-            bin-windows-i386/nwn_bic.windows.i386.zip \
             bin-windows-amd64/nwn_bic.windows.amd64.zip \
             bin-macos/nwn_bic.macosx.amd64.zip
