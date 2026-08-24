@@ -143,6 +143,32 @@ als Erstes beobachtet werden, wie schon P0.4.
   nicht eigenmächtig entschieden).
 - Checksums, README/LICENSE im Zip, `win`/`macos`-Task-Vereinheitlichung.
 
+## Nachtrag: offene Entscheidungen aus Abschnitt 6 des Hauptplans geklärt (2026-08-24)
+
+Tobias: *"Ich denke als Release auf GitHub reichen die üblichen Binaries,
+sollte jemand speziell etwas brauchen kann das nachher noch folgen, oder er
+kann es selbst generieren."*
+
+Damit sind beide im Hauptplan offen gelassenen Fragen entschieden:
+
+- **Windows i386 (P2.4):** gestrichen. Aus dem Build-Matrix, dem
+  `smoke-test-windows`-Job (der dadurch von einer Matrix auf ein festes
+  Ziel vereinfacht wurde — eine Matrix für ein einziges Element wäre selbst
+  unnötige Struktur gewesen) und dem `release`-Job entfernt. `nwn_bic.nimble`
+  bleibt unverändert (der `win`-Task selbst nimmt weiterhin `--cpu` nicht
+  entgegen, s. P1.1 — bei Bedarf kann i386 jederzeit durch einen manuellen
+  `nimble build -d:mingw --cpu:i386 ...`-Lauf selbst erzeugt werden, exakt
+  wie in der Entscheidung vorgesehen).
+- **macOS arm64 (P3.1):** bleibt zurückgestellt, keine Änderung nötig — war
+  ohnehin schon als P3/optional eingestuft, diese Antwort bestätigt das nur.
+
+Diff-Umfang: acht Fundstellen in `release.yml` (Matrix-Eintrag, zwei
+Build-/Upload-Steps, ein Matrix-Eintrag im Smoke-Test-Job plus dessen
+komplette Vereinfachung, zwei Download-/Pack-Steps im `release`-Job, ein
+Dateipfad in der `gh release create`-Liste) — real editiert, YAML-Syntax
+danach erneut geprüft (`python3 -c "import yaml; yaml.safe_load(...)"`,
+fehlerfrei).
+
 ## Ehrlicher Gesamt-Hinweis
 
 Der wertvollste Fund dieser Runde ist nicht "P1.1 funktioniert" (das war
