@@ -3,7 +3,10 @@ name: Create a release
 on:
   push:
     tags:
-      - '*'
+      # ponytail: P2.2 -- was '*', any tag (branch labels, experiments, ...)
+      # triggered a release attempt. v* is the convention this project's
+      # own version field already implies (v0.1.1 etc, see P2.3 below).
+      - 'v*'
 
 # ponytail: P0.5 -- GITHUB_TOKEN needs this explicitly for release creation
 # under default (read-only) repo permission settings.
@@ -79,21 +82,27 @@ jobs:
       # The whole "Download Windows DLLs" step and DLL-copy loop are
       # therefore gone; this is a structural fix, not a cosmetic one.
       #
-      # Deviation from the task as literally written: -d:mingw alone did
-      # NOT reliably select the cross-compiler in local verification (built
-      # with plain `gcc`, failed on a missing windows.h) -- explicit
-      # --gcc.exe/--gcc.linkerexe flags fixed it every time. Possibly an
-      # artifact of a from-source-bootstrapped Nim toolchain rather than
-      # the prebuilt one setup-nim-action provides; kept here regardless as
-      # a zero-cost safety net -- it can only help, never hurt, if -d:mingw
-      # already resolves correctly on the real runner.
+      # ponytail: P2.6, self-correction of an earlier P1 mistake -- an
+      # explicit --os:windows flag (redundant, -d:mingw already implies it
+      # on a unix host) was found to actively BREAK the cross-compiler
+      # selection in local testing, which is what an earlier version of
+      # this diff "fixed" with extra --gcc.exe/--gcc.linkerexe flags. Those
+      # extra flags treated a self-inflicted symptom, not a real problem in
+      # the task. Root-caused and reverted: the `win` task exactly as
+      # written in nwn_bic.nimble was correct all along, verified with a
+      # real (not simulated) `nimble win` run producing a working, static,
+      # correctly-named bin/nwn_bic.exe with no extra flags needed. This
+      # step is now the single source of truth the task already is --
+      # `nimble win` literally, nothing duplicated in the YAML.
+      #
+      # The old "for f in bin/*; do mv "$f" "$f.exe"; done" rename loop is
+      # also gone: verified that nim/nimble already append .exe themselves
+      # for a windows target. Running that loop on an already-.exe-suffixed
+      # file would have produced nwn_bic.exe.exe -- a real bug this
+      # verification caught before it shipped.
       - name: Compile for Windows amd64
         if: matrix.bintype == 'win-amd64'
-        run: |
-          nimble build -d:release -d:mingw --cpu:amd64 \
-            --gcc.exe:x86_64-w64-mingw32-gcc --gcc.linkerexe:x86_64-w64-mingw32-gcc \
-            --passL:-static --dynlibOverrideAll
-          for f in bin/*; do mv "$f" "$f.exe"; done
+        run: nimble win
 
       - name: Upload Windows amd64 artifact
         if: matrix.bintype == 'win-amd64'
@@ -175,19 +184,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        # ponytail: P2.3-adjacent -- needed for the tag/version check below,
-        # which reads nwn_bic.nimble. Not full P2.3 (that also fails the
-        # build on mismatch); kept as a warning-only check here to avoid
-        # scope-creeping P1 into P2's territory.
+        # needed for the tag/version check below (reads nwn_bic.nimble) and
+        # for README.md/LICENSE, which P2.5 folds into every release zip.
         uses: actions/checkout@v7
 
-      - name: Tag/version sanity check
+      - name: Tag/version check
+        # ponytail: P2.3 -- upgraded from the P1 warning-only version to a
+        # hard failure. \K instead of a fixed-width lookbehind: robust to
+        # however many spaces sit between "version" and "=" in the .nimble
+        # file, verified against the real file's exact formatting.
         run: |
           set -eu
-          nimble_version=$(grep -oP '(?<=version {5}= ")[^"]+' nwn_bic.nimble)
+          nimble_version=$(grep -oP '^version\s*=\s*"\K[^"]+' nwn_bic.nimble)
           tag="${GITHUB_REF_NAME}"
           if [ "v$nimble_version" != "$tag" ] && [ "$nimble_version" != "$tag" ]; then
-            echo "::warning::tag '$tag' does not match nwn_bic.nimble version '$nimble_version' -- proceeding anyway (P2.3 will make this a hard failure)"
+            echo "::error::tag '$tag' does not match nwn_bic.nimble version '$nimble_version' -- bump the version or fix the tag"
+            exit 1
           fi
 
       - name: Download Linux artifact
@@ -201,6 +213,7 @@ jobs:
         working-directory: bin-linux
         run: |
           chmod +x *
+          cp ../README.md ../LICENSE .
           zip nwn_bic.linux.amd64.zip *
 
       - name: Download Windows amd64 artifact
@@ -212,7 +225,9 @@ jobs:
       - name: Pack Windows amd64 artifact
         # ponytail: P1.1 -- no dll/ dir to fold in anymore, static binary only.
         working-directory: bin-windows-amd64
-        run: zip nwn_bic.windows.amd64.zip *
+        run: |
+          cp ../README.md ../LICENSE .
+          zip nwn_bic.windows.amd64.zip *
 
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
@@ -224,7 +239,19 @@ jobs:
         working-directory: bin-macos
         run: |
           chmod +x *
+          cp ../README.md ../LICENSE .
           zip nwn_bic.macosx.amd64.zip *
+
+      - name: Generate checksums
+        # ponytail: P2.1 -- one combined SHA256SUMS.txt (standard
+        # convention, e.g. Go releases) rather than a .sha256 per zip, so
+        # verification is `sha256sum -c SHA256SUMS.txt` once, not three
+        # separate commands.
+        run: |
+          set -eu
+          sha256sum bin-linux/*.zip bin-windows-amd64/*.zip bin-macos/*.zip \
+            | sed -E 's| bin-[a-z0-9-]+/| |' > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       # ponytail: P1.5 -- create-release@v1/upload-release-asset@v1 are
       # archived by GitHub with no further maintenance guarantee. `gh` is
@@ -240,4 +267,5 @@ jobs:
             --title "${GITHUB_REF_NAME}" \
             bin-linux/nwn_bic.linux.amd64.zip \
             bin-windows-amd64/nwn_bic.windows.amd64.zip \
-            bin-macos/nwn_bic.macosx.amd64.zip
+            bin-macos/nwn_bic.macosx.amd64.zip \
+            SHA256SUMS.txt
