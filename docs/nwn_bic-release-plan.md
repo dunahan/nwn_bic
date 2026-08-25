@@ -93,11 +93,11 @@ konkretem Fix-Ansatz versehen.
 
 | # | Aufgabe | Warum zuerst |
 |---|---|---|
-| 0.1 | `runs-on: ubuntu-18.04` überall durch `ubuntu-latest` ersetzen | ohne diesen Fix startet kein Job |
-| 0.2 | `NIMVER` auf dieselbe Version wie `build.yml`s `vars.NIM_VERSION` (≥2.0.0) heben, oder direkt dieselbe Repo-Variable referenzieren statt eines eigenen hartkodierten Werts | sonst Versionskonflikt mit `nwn_bic.nimble` |
-| 0.3 | `jiro4989/setup-nim-action@v2` statt manueller Nim-Installation/-Kompilierung für **alle** Plattformen übernehmen (identisch zu `build.yml`) | löst 0.1/0.2 strukturell mit, spart die komplette manuelle Download-/Cache-Logik, ein Werkzeug für beide Workflows |
-| 0.4 | GCC-14-Workaround (`--passNim:"--passC:-Wno-error=incompatible-pointer-types"`) bei jedem `nimble install --depsOnly` ergänzen | identisches, bereits gelöstes Problem wie in `build.yml`; ohne den Fix bricht `docopt.nim.c` auf aktuellen Runnern |
-| 0.5 | `permissions: contents: write` auf Job- oder Workflow-Ebene setzen | `GITHUB_TOKEN` braucht das explizit für Release-Erstellung |
+| 0.1 | ✅ `runs-on: ubuntu-18.04` überall durch `ubuntu-latest` ersetzen | ohne diesen Fix startet kein Job |
+| 0.2 | ✅ `NIMVER` auf dieselbe Version wie `build.yml`s `vars.NIM_VERSION` (≥2.0.0) heben, oder direkt dieselbe Repo-Variable referenzieren statt eines eigenen hartkodierten Werts | sonst Versionskonflikt mit `nwn_bic.nimble` |
+| 0.3 | ✅ `jiro4989/setup-nim-action@v2` statt manueller Nim-Installation/-Kompilierung für **alle** Plattformen übernehmen (identisch zu `build.yml`) | löst 0.1/0.2 strukturell mit, spart die komplette manuelle Download-/Cache-Logik, ein Werkzeug für beide Workflows |
+| 0.4 | ✅ GCC-14-Workaround (`--passNim:"--passC:-Wno-error=incompatible-pointer-types"`) bei jedem `nimble install --depsOnly` ergänzen | identisches, bereits gelöstes Problem wie in `build.yml`; ohne den Fix bricht `docopt.nim.c` auf aktuellen Runnern |
+| 0.5 | ✅ `permissions: contents: write` auf Job- oder Workflow-Ebene setzen | `GITHUB_TOKEN` braucht das explizit für Release-Erstellung |
 
 Ohne P0 lässt sich der Workflow nicht einmal testen — das ist die
 Voraussetzung für alles Weitere, genau wie P0 im Hauptplan Voraussetzung
@@ -107,11 +107,11 @@ für P1 war.
 
 | # | Aufgabe | Warum |
 |---|---|---|
-| 1.1 | Windows-Build auf den bereits vorhandenen `nimble win`-Task umstellen (`-d:mingw --passL:-static --dynlibOverrideAll`) statt Handbau + `dlls.zip` | statisch gelinktes Binary braucht keine DLL-Paketierung — löst das größte Windows-Risiko strukturell, nicht kosmetisch |
-| 1.2 | macOS-Build auf `setup-nim-action` umstellen (Sprosse 2, siehe 0.3) statt `build.sh`/`koch boot` | 10x schneller, ein Werkzeug für beide Workflows, weniger Wartungsfläche |
-| 1.3 | Smoke-Test vor dem Packen: dieselben Prüfungen wie in `build.yml` (mindestens `test.bic` + `test1.bic`, IDENTITY/FINAL BUILD/BUILD DETAILS-Marker) pro gebautem Binary ausführen | ein Release, das nie ausgeführt wurde, ist reine Hoffnung; Wiederverwendung der bereits geschriebenen Checks (Sprosse 2), kein neues Test-Framework |
-| 1.4 | `actions/checkout@v7`, `actions/cache@v6` (Versionsgleichstand mit `build.yml`) | ein gepflegter Versionsstand für beide Workflows, keine zwei Wahrheiten |
-| 1.5 | `create-release@v1`/`upload-release-asset@v1` ersetzen — Empfehlung: `gh release create <tag> --draft <dateien...>` über die im Runner vorinstallierte GitHub CLI, keine dritte Action nötig (Sprosse 4) | archivierte Actions ohne Garantie für Fortbestand; `gh` ist nativ vorhanden |
+| 1.1 | ✅ Windows-Build auf den bereits vorhandenen `nimble win`-Task umstellen (`-d:mingw --passL:-static --dynlibOverrideAll`) statt Handbau + `dlls.zip` | statisch gelinktes Binary braucht keine DLL-Paketierung — löst das größte Windows-Risiko strukturell, nicht kosmetisch |
+| 1.2 | ✅ macOS-Build auf `setup-nim-action` umstellen (Sprosse 2, siehe 0.3) statt `build.sh`/`koch boot` | 10x schneller, ein Werkzeug für beide Workflows, weniger Wartungsfläche |
+| 1.3 | ✅ Smoke-Test vor dem Packen: dieselben Prüfungen wie in `build.yml` (mindestens `test.bic` + `test1.bic`, IDENTITY/FINAL BUILD/BUILD DETAILS-Marker) pro gebautem Binary ausführen | ein Release, das nie ausgeführt wurde, ist reine Hoffnung; Wiederverwendung der bereits geschriebenen Checks (Sprosse 2), kein neues Test-Framework |
+| 1.4 | ✅ `actions/checkout@v7`, `actions/cache@v6` (Versionsgleichstand mit `build.yml`) | ein gepflegter Versionsstand für beide Workflows, keine zwei Wahrheiten |
+| 1.5 | ✅ `create-release@v1`/`upload-release-asset@v1` ersetzen — Empfehlung: `gh release create <tag> --draft <dateien...>` über die im Runner vorinstallierte GitHub CLI, keine dritte Action nötig (Sprosse 4) | archivierte Actions ohne Garantie für Fortbestand; `gh` ist nativ vorhanden |
 
 ### P2 — Qualität/Ergonomie
 
