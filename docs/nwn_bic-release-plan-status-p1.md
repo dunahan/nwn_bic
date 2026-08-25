@@ -16,6 +16,14 @@ ausführbar getestet, da kein `gh`-Binary vorhanden)
 
 ## P1.1 (Windows-DLL-Fix) — real kompiliert, real analysiert, ein Fund verändert den Plan
 
+> **Nachtrag (P2, 2026-08-24):** Die hier beschriebenen zusätzlichen
+> `--gcc.exe`/`--gcc.linkerexe`-Flags waren ein Symptom-Fix für ein
+> Problem, das erst durch das gleichzeitig hinzugefügte `--os:windows`
+> verursacht wurde — nicht durch den Task selbst. Root-Cause-Fund und
+> -Fix in `docs/nwn_bic-release-plan-status-p2.md` (P2.6). Der `win`-Task
+> aus `nwn_bic.nimble`, unverändert aufgerufen, war die ganze Zeit korrekt.
+> Text unten bleibt als Herleitung stehen.
+
 ### Die Kernbehauptung des Plans, jetzt bewiesen statt vermutet
 
 `nwn_bic.nimble`s `win`-Task deklariert `-d:mingw --passL:-static

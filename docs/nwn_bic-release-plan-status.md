@@ -96,7 +96,15 @@ auseinanderlaufender Versionsangaben.
 
 ## P0.4 (GCC-14-Workaround) — übernommen, aber ausdrücklich nicht unabhängig neu verifiziert
 
-Das ist der ehrlich offene Punkt.
+> **Nachtrag (P2, 2026-08-24):** Diese Lücke ist inzwischen geschlossen —
+> ein funktionierendes Nimble stand für die P2-Runde zur Verfügung, und
+> `nimble install --depsOnly` mit exakt diesem Flag lief real vollständig
+> durch (alle 24 CLI-Binärtools von `neverwinter`, kein Fehler). Details:
+> `docs/nwn_bic-release-plan-status-p2.md`, Abschnitt "P0.4 nachträglich
+> vollständig verifiziert". Der Text unten bleibt als Herleitung stehen,
+> warum die Verifikation zum Zeitpunkt von P0 noch nicht möglich war.
+
+Das war der ehrlich offene Punkt zum P0-Zeitpunkt (s. Nachtrag oben).
 
 **Was geprüft wurde:** `neverwinter/gff.nim` selbst zieht beim reinen
 Bauen (Schritt oben) kein `docopt` und keinen problematischen C-Code — der

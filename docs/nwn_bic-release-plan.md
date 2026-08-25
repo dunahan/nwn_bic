@@ -117,12 +117,12 @@ für P1 war.
 
 | # | Aufgabe | Warum |
 |---|---|---|
-| 2.1 | `sha256sum` je Artefakt erzeugen und mit hochladen | Standard-Erwartung an Release-Artefakte, Einzeiler |
-| 2.2 | Tag-Trigger auf `v*` beschränken (`on: push: tags: ['v*']`) | verhindert versehentliche Release-Versuche bei Nicht-Release-Tags |
-| 2.3 | Tag-gegen-Version-Check: `nwn_bic.nimble`s `version`-Feld muss zum Tag (`v${version}`) passen, sonst Job-Abbruch mit klarer Meldung | gleiche Grundidee wie `scripts/check-versions.js` im Ponytail-Projekt selbst, hier aber ein Bash-Zweizeiler (`grep`/`test`), kein Node-Tooling — YAGNI gilt auch für die Lösung dieses Problems |
+| 2.1 | ✅ `sha256sum` je Artefakt erzeugen und mit hochladen | Erledigt 2026-08-24, real erzeugt und mit `sha256sum -c` gegengeprüft |
+| 2.2 | ✅ Tag-Trigger auf `v*` beschränken | Erledigt 2026-08-24 |
+| 2.3 | ✅ Tag-gegen-Version-Check, harter Fehlschlag bei Mismatch | Erledigt 2026-08-24, Regex und Vergleichslogik real gegen beide Richtungen getestet |
 | 2.4 | ✅ Windows i386-Ziel streichen, sofern kein belegter Bedarf | Entschieden 2026-08-24: gestrichen, bereits mit P1 umgesetzt |
-| 2.5 | README + LICENSE ins jeweilige Artefakt-Zip aufnehmen | kleine Verbesserung, kein Aufwand |
-| 2.6 | `win`/`macos`-Nimble-Tasks als einzige Quelle für die Build-Kommandos nutzen (Workflow ruft `nimble win`/`nimble macos` statt eigener Flags) | eine Wahrheit statt Duplikat-Logik in YAML und `.nimble` gleichzeitig |
+| 2.5 | ✅ README + LICENSE ins jeweilige Artefakt-Zip aufnehmen | Erledigt 2026-08-24 |
+| 2.6 | ✅ `win`/`macos`-Nimble-Tasks als einzige Quelle nutzen | Erledigt 2026-08-24 — deckte dabei einen echten Fehler in P1 auf, s. `nwn_bic-release-plan-status-p2.md` |
 
 ### P3 — Später / optional
 
