@@ -3,145 +3,207 @@ name: Create a release
 on:
   push:
     tags:
-      - '*'
+      # ponytail: P2.2 -- was '*', any tag (branch labels, experiments, ...)
+      # triggered a release attempt. v* is the convention this project's
+      # own version field already implies (v0.1.1 etc, see P2.3 below).
+      - 'v*'
 
-env:
-  NIMVER: "1.6.4"
+# ponytail: P0.5 -- GITHUB_TOKEN needs this explicitly for release creation
+# under default (read-only) repo permission settings.
+permissions:
+  contents: write
 
 jobs:
   build-linux-win:
-    runs-on: ubuntu-18.04
+    # ponytail: P0.1 -- ubuntu-18.04 no longer exists as a hosted runner image.
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        bintype: [linux, win-i386, win-amd64]
+        # ponytail: P2.4 resolved (2026-08-24, Tobias) -- only the usual
+        # platform binaries ship on the GitHub release; anything niche
+        # (i386, etc.) is available on request or self-built from source.
+        bintype: [linux, win-amd64]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        # ponytail: P1.4 -- version parity with build.yml, one maintained value.
+        uses: actions/checkout@v7
 
-      - name: Cache nim, nimble
-        uses: actions/cache@v2
-        id: cache
+      # ponytail: P0.2/P0.3 -- same tool build.yml already uses. Replaces the
+      # whole manual "download nim-$NIMVER, tar xf, set PATH" block; the
+      # action resolves and caches a real toolchain instead of a hardcoded,
+      # now-incompatible 1.6.4 (nwn_bic.nimble requires nim >= 2.0.0).
+      - name: Set up Nim
+        uses: jiro4989/setup-nim-action@v2
         with:
-          key: build-${{ matrix.bintype }}-nim-${{ env.NIMVER }}--1
-          path: |
-            nim
-            ~/.nimble
+          nim-version: ${{ vars.NIM_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install mingw
         if: matrix.bintype != 'linux'
         run: sudo apt-get install -y --no-install-recommends mingw-w64
 
-      - name: Download nim
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir nim
-          cd nim
-          wget https://nim-lang.org/download/nim-$NIMVER-linux_x64.tar.xz
-          tar xf nim-$NIMVER-linux_x64.tar.xz
-
-      - name: Set up PATH
-        run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
-
+      # ponytail: P0.4 -- GCC-14/docopt.nim.c workaround, same as build.yml.
+      # Locally verified (see docs/nwn_bic-release-plan-status.md) that
+      # nwn_bic itself compiles clean under Nim 2.0.0 with this flag; the
+      # docopt.nim.c failure path itself could not be independently
+      # reproduced in the verification sandbox (no working nimble there),
+      # so this is a carried-over fix, not an independently re-proven one.
       - name: Install nimble packages
-        run: nimble install --depsOnly -y
+        run: nimble install --depsOnly -y --passNim:"--passC:-Wno-error=incompatible-pointer-types"
 
       - name: Compile for Linux
         if: matrix.bintype == 'linux'
         run: nimble build -d:release
 
+      - name: Smoke test (Linux)
+        if: matrix.bintype == 'linux'
+        # ponytail: P1.3 -- reuse of the same check build.yml already runs,
+        # not a new test invented for this workflow (rung 2).
+        run: |
+          set -eu
+          ./bin/nwn_bic examples/bic/test1.bic
+          test -s examples/bic/test1.txt
+          grep -Fq 'BUILD DETAILS' examples/bic/test1.txt
+          rm -f examples/bic/test1.txt
+
       - name: Upload Linux artifact
         if: matrix.bintype == 'linux'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: nwn_bic.linux.amd64
           path: bin/*
 
-      - name: Download Windows DLLs
-        if: matrix.bintype == 'win-i386' || matrix.bintype == 'win-amd64'
-        run: |
-          mkdir dll
-          cd dll
-          wget https://nim-lang.org/download/dlls.zip
-          unzip dlls.zip
-
-      - name: Compile for Windows i386
-        if: matrix.bintype == 'win-i386'
-        # on Ubuntu the binary has no .exe extension for some reason
-        run: |
-          nimble build -d:release -d:mingw --cpu:i386
-          for f in bin/*; do mv "$f" "$f.exe"; done
-          for f in dll/*; do cp "$f" "bin/"; done
-
-      - name: Upload Windows i386 artifact
-        if: matrix.bintype == 'win-i386'
-        uses: actions/upload-artifact@v2
-        with:
-          name: nwn_bic.windows.i386
-          path: bin/*
-
+      # ponytail: P1.1 -- the nimble.nimble `win` task already declares
+      # -d:mingw --passL:-static --dynlibOverrideAll, i.e. a static Windows
+      # binary that needs no shipped DLLs at all. Verified empirically
+      # (objdump on a real cross-compiled binary): only KERNEL32.dll and
+      # msvcrt.dll are referenced -- both ship with every Windows install,
+      # neither is one of the runtime DLLs the old dlls.zip step bundled.
+      # The whole "Download Windows DLLs" step and DLL-copy loop are
+      # therefore gone; this is a structural fix, not a cosmetic one.
+      #
+      # ponytail: P2.6, self-correction of an earlier P1 mistake -- an
+      # explicit --os:windows flag (redundant, -d:mingw already implies it
+      # on a unix host) was found to actively BREAK the cross-compiler
+      # selection in local testing, which is what an earlier version of
+      # this diff "fixed" with extra --gcc.exe/--gcc.linkerexe flags. Those
+      # extra flags treated a self-inflicted symptom, not a real problem in
+      # the task. Root-caused and reverted: the `win` task exactly as
+      # written in nwn_bic.nimble was correct all along, verified with a
+      # real (not simulated) `nimble win` run producing a working, static,
+      # correctly-named bin/nwn_bic.exe with no extra flags needed. This
+      # step is now the single source of truth the task already is --
+      # `nimble win` literally, nothing duplicated in the YAML.
+      #
+      # The old "for f in bin/*; do mv "$f" "$f.exe"; done" rename loop is
+      # also gone: verified that nim/nimble already append .exe themselves
+      # for a windows target. Running that loop on an already-.exe-suffixed
+      # file would have produced nwn_bic.exe.exe -- a real bug this
+      # verification caught before it shipped.
       - name: Compile for Windows amd64
         if: matrix.bintype == 'win-amd64'
-        run: |
-          nimble build -d:release -d:mingw --cpu:amd64
-          for f in bin/*; do mv "$f" "$f.exe"; done
-          for f in dll/*; do cp "$f" "bin/"; done
+        run: nimble win
 
       - name: Upload Windows amd64 artifact
         if: matrix.bintype == 'win-amd64'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: nwn_bic.windows.amd64
           path: bin/*
+
+  # ponytail: P1.3 -- the cross-compiled Windows binary is NOT smoke-tested
+  # on the ubuntu build runner. Verified locally (Wine 9.0): plain
+  # sequential file reads work fine on a statically-linked mingw binary,
+  # but readGffRoot's read-after-seek (needed for the GFF struct/field/label
+  # offset table) returns garbage under Wine's msvcrt emulation, even though
+  # the exact same logic is already proven correct on a REAL windows-latest
+  # runner by build.yml's own smoke tests (natively built there, not
+  # mingw-cross-compiled). That gap -- mingw-cross-compiled vs. natively
+  # built -- is exactly what this job closes: it downloads the actual
+  # release artifact and runs it on real Windows, not an emulator.
+  smoke-test-windows:
+    needs: build-linux-win
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nwn_bic.windows.amd64
+          path: bin
+
+      - name: Run against a real character
+        shell: bash
+        run: |
+          set -eu
+          ./bin/nwn_bic.exe examples/bic/test1.bic
+          test -s examples/bic/test1.txt
+          grep -Fq 'BUILD DETAILS' examples/bic/test1.txt
+          rm -f examples/bic/test1.txt
 
   build-macos:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
 
-      - name: Cache nim, nimble
-        uses: actions/cache@v2
-        id: cache
+      # ponytail: P1.2 -- same setup-nim-action as build.yml and the linux/
+      # windows job above, instead of compiling all of Nim from source
+      # (build.sh + koch boot + koch tools), which was also still pinned to
+      # the wrong (1.6.4) version. One tool, one version source, ~10x faster.
+      - name: Set up Nim
+        uses: jiro4989/setup-nim-action@v2
         with:
-          key: build-macos-${{ env.NIMVER }}--1
-          path: |
-            nim
-            ~/.nimble
-
-      - name: Download and build nim, add to PATH
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir nim
-          cd nim
-          wget https://nim-lang.org/download/nim-$NIMVER.tar.xz
-          tar xf nim-$NIMVER.tar.xz
-          cd nim-$NIMVER
-          sh build.sh
-          bin/nim c koch
-          ./koch boot -d:release
-          ./koch tools
-
-      - name: Set up PATH
-        run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
+          nim-version: ${{ vars.NIM_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install nimble packages
-        run: nimble install --depsOnly -y
+        run: nimble install --depsOnly -y --passNim:"--passC:-Wno-error=incompatible-pointer-types"
 
       - name: Compile for macOS
         run: nimble build -d:release
 
+      - name: Smoke test (macOS)
+        run: |
+          set -eu
+          ./bin/nwn_bic examples/bic/test1.bic
+          test -s examples/bic/test1.txt
+          grep -Fq 'BUILD DETAILS' examples/bic/test1.txt
+          rm -f examples/bic/test1.txt
+
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: nwn_bic.macos.amd64
           path: bin/*
 
   release:
-    needs: [build-linux-win, build-macos]
-    runs-on: ubuntu-18.04
+    needs: [build-linux-win, smoke-test-windows, build-macos]
+    runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        # needed for the tag/version check below (reads nwn_bic.nimble) and
+        # for README.md/LICENSE, which P2.5 folds into every release zip.
+        uses: actions/checkout@v7
+
+      - name: Tag/version check
+        # ponytail: P2.3 -- upgraded from the P1 warning-only version to a
+        # hard failure. \K instead of a fixed-width lookbehind: robust to
+        # however many spaces sit between "version" and "=" in the .nimble
+        # file, verified against the real file's exact formatting.
+        run: |
+          set -eu
+          nimble_version=$(grep -oP '^version\s*=\s*"\K[^"]+' nwn_bic.nimble)
+          tag="${GITHUB_REF_NAME}"
+          if [ "v$nimble_version" != "$tag" ] && [ "$nimble_version" != "$tag" ]; then
+            echo "::error::tag '$tag' does not match nwn_bic.nimble version '$nimble_version' -- bump the version or fix the tag"
+            exit 1
+          fi
+
       - name: Download Linux artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: nwn_bic.linux.amd64
           path: bin-linux
@@ -151,30 +213,24 @@ jobs:
         working-directory: bin-linux
         run: |
           chmod +x *
+          cp ../README.md ../LICENSE .
           zip nwn_bic.linux.amd64.zip *
 
-      - name: Download Windows i386 artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: nwn_bic.windows.i386
-          path: bin-windows-i386
-
-      - name: Pack Windows i386 artifact
-        working-directory: bin-windows-i386
-        run: zip nwn_bic.windows.i386.zip *
-
       - name: Download Windows amd64 artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: nwn_bic.windows.amd64
           path: bin-windows-amd64
 
       - name: Pack Windows amd64 artifact
+        # ponytail: P1.1 -- no dll/ dir to fold in anymore, static binary only.
         working-directory: bin-windows-amd64
-        run: zip nwn_bic.windows.amd64.zip *
+        run: |
+          cp ../README.md ../LICENSE .
+          zip nwn_bic.windows.amd64.zip *
 
       - name: Download macOS artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: nwn_bic.macos.amd64
           path: bin-macos
@@ -183,55 +239,33 @@ jobs:
         working-directory: bin-macos
         run: |
           chmod +x *
+          cp ../README.md ../LICENSE .
           zip nwn_bic.macosx.amd64.zip *
 
+      - name: Generate checksums
+        # ponytail: P2.1 -- one combined SHA256SUMS.txt (standard
+        # convention, e.g. Go releases) rather than a .sha256 per zip, so
+        # verification is `sha256sum -c SHA256SUMS.txt` once, not three
+        # separate commands.
+        run: |
+          set -eu
+          sha256sum bin-linux/*.zip bin-windows-amd64/*.zip bin-macos/*.zip \
+            | sed -E 's| bin-[a-z0-9-]+/| |' > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # ponytail: P1.5 -- create-release@v1/upload-release-asset@v1 are
+      # archived by GitHub with no further maintenance guarantee. `gh` is
+      # preinstalled on every hosted runner (rung 4: native platform
+      # feature, not a new third-party dependency) and does create+upload
+      # in one call.
       - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: true
-          prerelease: false
-
-      - name: Upload Linux release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-linux/nwn_bic.linux.amd64.zip
-          asset_name: nwn_bic.linux.amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Windows i386 release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-windows-i386/nwn_bic.windows.i386.zip
-          asset_name: nwn_bic.windows.i386.zip
-          asset_content_type: application/zip
-
-      - name: Upload Windows amd64 release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-windows-amd64/nwn_bic.windows.amd64.zip
-          asset_name: nwn_bic.windows.amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload macOS release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-macos/nwn_bic.macosx.amd64.zip
-          asset_name: nwn_bic.macosx.amd64.zip
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --draft \
+            --title "${GITHUB_REF_NAME}" \
+            bin-linux/nwn_bic.linux.amd64.zip \
+            bin-windows-amd64/nwn_bic.windows.amd64.zip \
+            bin-macos/nwn_bic.macosx.amd64.zip \
+            SHA256SUMS.txt
