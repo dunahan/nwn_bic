@@ -253,19 +253,40 @@ jobs:
             | sed -E 's| bin-[a-z0-9-]+/| |' > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # ponytail: P1.5 -- create-release@v1/upload-release-asset@v1 are
-      # archived by GitHub with no further maintenance guarantee. `gh` is
-      # preinstalled on every hosted runner (rung 4: native platform
-      # feature, not a new third-party dependency) and does create+upload
-      # in one call.
+      # ponytail: P2.7 (bugfix, 2026-08-26) -- `gh release create` silently
+      # created the release under an auto-generated "untagged-<hash>" tag
+      # instead of "${GITHUB_REF_NAME}" on the first real run. Root cause
+      # not fully confirmed (no gh/live-API access in the verification
+      # sandbox to test against): passing --target explicitly is a
+      # reasonable, low-risk mitigation (removes any commitish-resolution
+      # ambiguity for a shallow, tag-only checkout with no branch info),
+      # but the real safety net is the check below -- it does not assume
+      # the mitigation actually fixed the cause, it verifies the outcome.
+      #
+      # ponytail: verification deliberately reads gh release create's own
+      # printed URL rather than a separate `gh release view "$TAG"` query.
+      # A second query re-introduces the same tag-resolution step that may
+      # be what failed in the first place, so it could stay silent in
+      # exactly the case it exists to catch. The URL is the one signal
+      # that already proved reliable: it is what exposed this bug.
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
+          set -eu
+          url=$(gh release create "${GITHUB_REF_NAME}" \
+            --target "${GITHUB_SHA}" \
             --draft \
             --title "${GITHUB_REF_NAME}" \
             bin-linux/nwn_bic.linux.amd64.zip \
             bin-windows-amd64/nwn_bic.windows.amd64.zip \
             bin-macos/nwn_bic.macosx.amd64.zip \
-            SHA256SUMS.txt
+            SHA256SUMS.txt)
+          echo "release URL: $url"
+          case "$url" in
+            */releases/tag/"${GITHUB_REF_NAME}") ;;
+            *)
+              echo "::error::gh created the release at '$url', not under tag '${GITHUB_REF_NAME}' -- see P2.7 in nwn_bic-release-plan-status-p2.md"
+              exit 1
+              ;;
+          esac
