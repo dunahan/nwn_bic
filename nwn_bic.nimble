@@ -1,5 +1,5 @@
 # Package
-version       = "0.1.1.3"
+version       = "0.1.1.4"
 author        = "dunahan"
 description   = "nwn_bic prints lvlup structure of nwn toons"
 license       = "MIT"
