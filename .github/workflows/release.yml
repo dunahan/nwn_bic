@@ -1,54 +1,45 @@
 name: Create a release
 
+# ponytail: Konsolidiert aus P0-P2.9 (siehe docs/nwn_bic-release-plan-status*.md
+# fuer die volle Herleitung jeder Entscheidung). Dieser Kommentarblock nennt nur
+# die Kurzfassung, damit die Datei selbst lesbar bleibt statt zum Essay zu werden.
+#
+# Struktur: build-linux-win (Matrix) -> smoke-test-windows (echter Runner, kein
+# Wine) + build-macos -> release (packt, checkt, veroeffentlicht).
+
 on:
   push:
     tags:
-      # ponytail: P2.2 -- was '*', any tag (branch labels, experiments, ...)
-      # triggered a release attempt. v* is the convention this project's
-      # own version field already implies (v0.1.1 etc, see P2.3 below).
-      - 'v*'
+      - 'v*'  # Konvention, kein "jeder Tag loest aus" (P2.2)
 
-# ponytail: P0.5 -- GITHUB_TOKEN needs this explicitly for release creation
-# under default (read-only) repo permission settings.
 permissions:
-  contents: write
+  contents: write  # GITHUB_TOKEN braucht das explizit fuer Release-Erstellung (P0.5)
 
 jobs:
   build-linux-win:
-    # ponytail: P0.1 -- ubuntu-18.04 no longer exists as a hosted runner image.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # ubuntu-18.04 existiert nicht mehr (P0.1)
     strategy:
       matrix:
-        # ponytail: P2.4 resolved (2026-08-24, Tobias) -- only the usual
-        # platform binaries ship on the GitHub release; anything niche
-        # (i386, etc.) is available on request or self-built from source.
+        # Windows i386 bewusst gestrichen (Tobias, 2026-08-24): "die ueblichen
+        # Binaries reichen, Spezialfaelle bei Bedarf selbst generieren."
         bintype: [linux, win-amd64]
     steps:
       - name: Checkout
-        # ponytail: P1.4 -- version parity with build.yml, one maintained value.
         uses: actions/checkout@v7
 
-      # ponytail: P0.2/P0.3 -- same tool build.yml already uses. Replaces the
-      # whole manual "download nim-$NIMVER, tar xf, set PATH" block; the
-      # action resolves and caches a real toolchain instead of a hardcoded,
-      # now-incompatible 1.6.4 (nwn_bic.nimble requires nim >= 2.0.0).
       - name: Set up Nim
         uses: jiro4989/setup-nim-action@v2
         with:
-          nim-version: ${{ vars.NIM_VERSION }}
+          nim-version: ${{ vars.NIM_VERSION }}  # >= 2.0.0, siehe nwn_bic.nimble
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install mingw
         if: matrix.bintype != 'linux'
         run: sudo apt-get install -y --no-install-recommends mingw-w64
 
-      # ponytail: P0.4 -- GCC-14/docopt.nim.c workaround, same as build.yml.
-      # Locally verified (see docs/nwn_bic-release-plan-status.md) that
-      # nwn_bic itself compiles clean under Nim 2.0.0 with this flag; the
-      # docopt.nim.c failure path itself could not be independently
-      # reproduced in the verification sandbox (no working nimble there),
-      # so this is a carried-over fix, not an independently re-proven one.
       - name: Install nimble packages
+        # GCC-14/docopt.nim.c-Workaround (P0.4), betrifft real jeden C-Compile-
+        # Schritt in der Kette (auch neverwinters vendorten zstd-Code), nicht nur docopt.
         run: nimble install --depsOnly -y --passNim:"--passC:-Wno-error=incompatible-pointer-types"
 
       - name: Compile for Linux
@@ -57,8 +48,6 @@ jobs:
 
       - name: Smoke test (Linux)
         if: matrix.bintype == 'linux'
-        # ponytail: P1.3 -- reuse of the same check build.yml already runs,
-        # not a new test invented for this workflow (rung 2).
         run: |
           set -eu
           ./bin/nwn_bic examples/bic/test1.bic
@@ -73,35 +62,12 @@ jobs:
           name: nwn_bic.linux.amd64
           path: bin/*
 
-      # ponytail: P1.1 -- the nimble.nimble `win` task already declares
-      # -d:mingw --passL:-static --dynlibOverrideAll, i.e. a static Windows
-      # binary that needs no shipped DLLs at all. Verified empirically
-      # (objdump on a real cross-compiled binary): only KERNEL32.dll and
-      # msvcrt.dll are referenced -- both ship with every Windows install,
-      # neither is one of the runtime DLLs the old dlls.zip step bundled.
-      # The whole "Download Windows DLLs" step and DLL-copy loop are
-      # therefore gone; this is a structural fix, not a cosmetic one.
-      #
-      # ponytail: P2.6, self-correction of an earlier P1 mistake -- an
-      # explicit --os:windows flag (redundant, -d:mingw already implies it
-      # on a unix host) was found to actively BREAK the cross-compiler
-      # selection in local testing, which is what an earlier version of
-      # this diff "fixed" with extra --gcc.exe/--gcc.linkerexe flags. Those
-      # extra flags treated a self-inflicted symptom, not a real problem in
-      # the task. Root-caused and reverted: the `win` task exactly as
-      # written in nwn_bic.nimble was correct all along, verified with a
-      # real (not simulated) `nimble win` run producing a working, static,
-      # correctly-named bin/nwn_bic.exe with no extra flags needed. This
-      # step is now the single source of truth the task already is --
-      # `nimble win` literally, nothing duplicated in the YAML.
-      #
-      # The old "for f in bin/*; do mv "$f" "$f.exe"; done" rename loop is
-      # also gone: verified that nim/nimble already append .exe themselves
-      # for a windows target. Running that loop on an already-.exe-suffixed
-      # file would have produced nwn_bic.exe.exe -- a real bug this
-      # verification caught before it shipped.
       - name: Compile for Windows amd64
         if: matrix.bintype == 'win-amd64'
+        # nwn_bic.nimble deklariert den `win`-Task bereits (-d:mingw --passL:-static
+        # --dynlibOverrideAll): statisches Binary, nur KERNEL32.dll/msvcrt.dll noetig
+        # (per objdump verifiziert). Kein dlls.zip, kein manuelles .exe-Rename noetig
+        # (nim/nimble haengen .exe fuer ein Windows-Ziel bereits selbst an) (P1.1/P2.6).
         run: nimble win
 
       - name: Upload Windows amd64 artifact
@@ -111,17 +77,10 @@ jobs:
           name: nwn_bic.windows.amd64
           path: bin/*
 
-  # ponytail: P1.3 -- the cross-compiled Windows binary is NOT smoke-tested
-  # on the ubuntu build runner. Verified locally (Wine 9.0): plain
-  # sequential file reads work fine on a statically-linked mingw binary,
-  # but readGffRoot's read-after-seek (needed for the GFF struct/field/label
-  # offset table) returns garbage under Wine's msvcrt emulation, even though
-  # the exact same logic is already proven correct on a REAL windows-latest
-  # runner by build.yml's own smoke tests (natively built there, not
-  # mingw-cross-compiled). That gap -- mingw-cross-compiled vs. natively
-  # built -- is exactly what this job closes: it downloads the actual
-  # release artifact and runs it on real Windows, not an emulator.
   smoke-test-windows:
+    # Wine liefert fuer readGffRoots Seek-nach-Read-Muster falsche Werte (real
+    # getestet), waere also ein irrefuehrender Test. Echter windows-latest-Runner
+    # gegen das reale, cross-kompilierte Artefakt statt Emulation (P1.3).
     needs: build-linux-win
     runs-on: windows-latest
     steps:
@@ -144,15 +103,11 @@ jobs:
           rm -f examples/bic/test1.txt
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-latest  # arm64 bewusst zurueckgestellt (kein belegter Bedarf, YAGNI)
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # ponytail: P1.2 -- same setup-nim-action as build.yml and the linux/
-      # windows job above, instead of compiling all of Nim from source
-      # (build.sh + koch boot + koch tools), which was also still pinned to
-      # the wrong (1.6.4) version. One tool, one version source, ~10x faster.
       - name: Set up Nim
         uses: jiro4989/setup-nim-action@v2
         with:
@@ -184,15 +139,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        # needed for the tag/version check below (reads nwn_bic.nimble) and
-        # for README.md/LICENSE, which P2.5 folds into every release zip.
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7  # fuer nwn_bic.nimble (Version) + README/LICENSE
 
       - name: Tag/version check
-        # ponytail: P2.3 -- upgraded from the P1 warning-only version to a
-        # hard failure. \K instead of a fixed-width lookbehind: robust to
-        # however many spaces sit between "version" and "=" in the .nimble
-        # file, verified against the real file's exact formatting.
+        # Harter Fehlschlag statt Warnung (P2.3): Tag ohne passende .nimble-Version
+        # darf keinen Release erzeugen. \K statt fixer Lookbehind-Breite, robust
+        # gegen die tatsaechliche Leerzeichenzahl in "version       = ...".
         run: |
           set -eu
           nimble_version=$(grep -oP '^version\s*=\s*"\K[^"]+' nwn_bic.nimble)
@@ -209,7 +161,6 @@ jobs:
           path: bin-linux
 
       - name: Pack Linux artifact
-        # the executable flag is removed on artifact upload
         working-directory: bin-linux
         run: |
           chmod +x *
@@ -223,7 +174,6 @@ jobs:
           path: bin-windows-amd64
 
       - name: Pack Windows amd64 artifact
-        # ponytail: P1.1 -- no dll/ dir to fold in anymore, static binary only.
         working-directory: bin-windows-amd64
         run: |
           cp ../README.md ../LICENSE .
@@ -243,57 +193,46 @@ jobs:
           zip nwn_bic.macosx.amd64.zip *
 
       - name: Generate checksums
-        # ponytail: P2.1 -- one combined SHA256SUMS.txt (standard
-        # convention, e.g. Go releases) rather than a .sha256 per zip, so
-        # verification is `sha256sum -c SHA256SUMS.txt` once, not three
-        # separate commands.
+        # Eine kombinierte SHA256SUMS.txt (Go-Release-Konvention) statt einer
+        # .sha256 pro Zip -- Verifikation ist "sha256sum -c" einmal, nicht dreimal (P2.1).
         run: |
           set -eu
           sha256sum bin-linux/*.zip bin-windows-amd64/*.zip bin-macos/*.zip \
             | sed -E 's| bin-[a-z0-9-]+/| |' > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # ponytail: P2.9 (2026-08-28, Tobias) -- --draft removed on request,
-      # release now publishes immediately instead of needing a manual
-      # "Publish" click. Two side effects worth knowing:
-      #   - watchers/stargazers get notified immediately (drafts are
-      #     silent); there is no more review-before-public step.
-      #   - --generate-notes added: `gh release create` may require some
-      #     notes source when not running interactively, a requirement
-      #     --draft may have been exempting us from (untested here, no gh
-      #     binary in the verification sandbox -- added as a safety net,
-      #     not because a failure was observed). Auto-generates notes from
-      #     merged PRs/commits since the last release; harmless if it
-      #     turns out not to have been required at all.
-      #
-      # ponytail: P2.7/P2.8 background, kept as a warning against
-      # reintroducing --draft casually -- two real runs showed `gh`
-      # returning a synthetic ".../untagged-<hash>" URL instead of our tag,
-      # confirmed (cli/cli#11589, cli/cli#5252, googleapis/release-please#1650)
-      # to be expected --draft behavior: a draft only gets its real tag URL
-      # at publish time, regardless of --target or whether the tag already
-      # exists. Full history: nwn_bic-release-plan-status-p2-7.md/-p2-8.md.
-      # That mechanism is specific to --draft, so the URL check below is
-      # reinstated now that publishing happens immediately -- unlike the
-      # P2.7 attempt, this one is not fighting the drafts-only quirk.
-      - name: Create release
+      - name: Create or update release
+        # ponytail: NEU ggue. dem bisherigen Stand. v0.1.1.4 brach ab, weil
+        # "gh release create" bei bereits existierendem Tag hart scheitert (kein
+        # idempotenter Pfad). Fix: erst pruefen (gh release view), dann verzweigen
+        # -- neu anlegen ODER Assets auf dem bestehenden Release ueberschreiben
+        # (--clobber). Damit macht ein erneuter Tag-Push (Re-Run, Hotfix-Zip) den
+        # Job nicht mehr kaputt. Siehe docs/nwn_bic-release-plan-status-p2-10.md
+        # fuer die volle Herleitung und den offenen Verifikationsvorbehalt.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
-          url=$(gh release create "${GITHUB_REF_NAME}" \
-            --target "${GITHUB_SHA}" \
-            --generate-notes \
-            --title "${GITHUB_REF_NAME}" \
-            bin-linux/nwn_bic.linux.amd64.zip \
-            bin-windows-amd64/nwn_bic.windows.amd64.zip \
-            bin-macos/nwn_bic.macosx.amd64.zip \
-            SHA256SUMS.txt)
+          tag="${GITHUB_REF_NAME}"
+          files="bin-linux/nwn_bic.linux.amd64.zip bin-windows-amd64/nwn_bic.windows.amd64.zip bin-macos/nwn_bic.macosx.amd64.zip SHA256SUMS.txt"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag already exists -- uploading/overwriting assets"
+            gh release upload "$tag" $files --clobber
+            url=$(gh release view "$tag" --json url -q .url)
+          else
+            url=$(gh release create "$tag" \
+              --target "${GITHUB_SHA}" \
+              --generate-notes \
+              --title "$tag" \
+              $files)
+          fi
+
           echo "release URL: $url"
           case "$url" in
-            */releases/tag/"${GITHUB_REF_NAME}") ;;
+            */releases/tag/"$tag") ;;
             *)
-              echo "::error::gh created the release at '$url', not under tag '${GITHUB_REF_NAME}'"
+              echo "::error::release ended up at '$url', not under tag '$tag'"
               exit 1
               ;;
           esac
